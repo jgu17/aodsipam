@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
@@ -13,7 +15,6 @@ import (
 	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
 	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
 	"github.com/k8snetworkplumbingwg/whereabouts/pkg/version"
-	"net"
 )
 
 func main() {
@@ -104,6 +105,7 @@ func cmdAdd(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM, cniVersion st
 			Gateway: v.Gateway})
 	}
 
+	logging.Debugf("result----------------------: %v\n", result)
 	return cnitypes.PrintResult(result, cniVersion)
 }
 
@@ -120,3 +122,4 @@ func cmdDel(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM) error {
 
 	return nil
 }
+

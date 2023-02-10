@@ -101,7 +101,8 @@ spec:
           - >
             SLEEP=false /install-cni.sh &&
             /ip-control-loop -log-level debug
-        image: ghcr.io/k8snetworkplumbingwg/whereabouts:latest-amd64
+        image: ghcr.io/k8snetworkplumbingwg/whereabouts:op1
+        imagePullPolicy: IfNotPresent
         env:
         - name: WHEREABOUTS_NAMESPACE
           valueFrom:
@@ -121,6 +122,8 @@ spec:
           mountPath: /host/opt/cni/bin
         - name: cni-net-dir
           mountPath: /host/etc/cni/net.d
+        - name: cni-tmp
+          mountPath: /tmp
       volumes:
         - name: cnibin
           hostPath:
@@ -128,3 +131,6 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
+        - name: cni-tmp
+          hostPath:
+            path: /tmp
