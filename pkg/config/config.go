@@ -354,7 +354,7 @@ func loadPluginConfig(bytes []byte) (*cnitypes.NetConf, error) {
 }
 
 func isNetworkRelevant(ipamConfig *types.IPAMConfig) bool {
-	const relevantIPAMType = "whereabouts"
+	const relevantIPAMType = "aodsipam"
 	return ipamConfig.Type == relevantIPAMType
 }
 

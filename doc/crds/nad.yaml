@@ -7,11 +7,11 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "name": "whereaboutsexample",
-      "type": "aodsipam",
+      "type": "macvlan",
       "master": "eth0",
       "mode": "bridge",
       "ipam": {
-        "type": "whereabouts",
+        "type": "aodsipam",
         "range": "192.168.2.225/28"
       }
     }'
