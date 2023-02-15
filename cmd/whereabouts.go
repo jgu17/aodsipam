@@ -82,8 +82,12 @@ func cmdAdd(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM, cniVersion st
 	// 	return fmt.Errorf("error at storage engine: %w", err)
 	// }
 
-	// 2023-02-15T00:03:38Z [debug] newips---------------------: [{192.168.2.225 fffffff0}]
-	// 2023-02-15T00:03:38Z [debug] result----------------------: &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:fffffff0} Gateway:<nil>}] [] {[]  [] []}}
+	//2023-02-15T03:52:38Z [debug] newips static3--------------------: [{192.168.2.225 ffffffff}]
+	//////2023-02-15T03:52:38Z [debug] result----------------------: &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
+	//2023-02-15T03:38:15Z [debug] newips static4--------------------: [{192.168.2.225 ffffffff}]
+	//////2023-02-15T03:38:15Z [debug] result----------------------:  &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
+	// 2023-02-15T03:27:02Z [debug] newips static3--------------------: [{192.168.2.225 ffffffff}]
+	///////2023-02-15T03:27:02Z [debug] result----------------------: &{0.4.0 [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
 
 	//newips = make([]net.IPNet, 1)
 
