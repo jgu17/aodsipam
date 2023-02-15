@@ -11,9 +11,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	"aodsipam/pkg/types"
+
 	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,9 +22,9 @@ import (
 	k8sclient "k8s.io/client-go/kubernetes"
 	fakek8sclient "k8s.io/client-go/kubernetes/fake"
 
-	wbclient "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned"
-	fakewbclient "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned/fake"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
+	wbclient "aodsipam/pkg/client/clientset/versioned"
+	fakewbclient "aodsipam/pkg/client/clientset/versioned/fake"
+	"aodsipam/pkg/storage/kubernetes"
 )
 
 func TestIPReconciler(t *testing.T) {

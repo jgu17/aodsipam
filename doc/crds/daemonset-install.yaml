@@ -99,7 +99,7 @@ spec:
           - >
             SLEEP=false /install-cni.sh &&
             /ip-control-loop -log-level debug
-        image: localhost/whereabouts:latest
+        image: localhost/aodsipam:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: WHEREABOUTS_NAMESPACE

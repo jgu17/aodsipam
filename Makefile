@@ -1,5 +1,5 @@
 IMG_TAG ?= latest
-IMG_REPO ?= localhost/whereabouts
+IMG_REPO ?= localhost/aodsipam
 
 IMG := $(IMG_REPO):$(IMG_TAG)
 

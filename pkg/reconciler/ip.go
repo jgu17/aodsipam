@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
+	"aodsipam/pkg/logging"
 )
 
 const (

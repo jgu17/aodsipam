@@ -18,8 +18,8 @@ limitations under the License.
 package whereabouts
 
 import (
-	internalinterfaces "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions/whereabouts.cni.cncf.io/v1alpha1"
+	internalinterfaces "aodsipam/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "aodsipam/pkg/client/informers/externalversions/whereabouts.cni.cncf.io/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

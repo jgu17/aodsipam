@@ -3,8 +3,8 @@ package poolconsistency
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/e2e/retrievers"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage"
+	"aodsipam/e2e/retrievers"
+	"aodsipam/pkg/storage"
 )
 
 type Checker struct {

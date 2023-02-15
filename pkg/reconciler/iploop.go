@@ -8,12 +8,12 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/allocate"
-	whereaboutsv1alpha1 "github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/allocate"
+	whereaboutsv1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	"aodsipam/pkg/logging"
+	"aodsipam/pkg/storage"
+	"aodsipam/pkg/storage/kubernetes"
+	"aodsipam/pkg/types"
 )
 
 type ReconcileLooper struct {

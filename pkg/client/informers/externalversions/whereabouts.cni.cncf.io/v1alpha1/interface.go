@@ -18,7 +18,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions/internalinterfaces"
+	internalinterfaces "aodsipam/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

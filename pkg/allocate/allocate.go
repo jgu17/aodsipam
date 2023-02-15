@@ -5,8 +5,8 @@ import (
 	"math"
 	"net"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/logging"
+	"aodsipam/pkg/types"
 )
 
 // AssignmentError defines an IP assignment error.

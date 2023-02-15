@@ -21,10 +21,10 @@ set -o pipefail
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
 bash ./vendor/k8s.io/code-generator/generate-groups.sh "client,informer,lister" \
-  github.com/k8snetworkplumbingwg/whereabouts/pkg/client \
-  github.com/k8snetworkplumbingwg/whereabouts/pkg/api \
+  aodsipam/pkg/client \
+  aodsipam/pkg/api \
   whereabouts.cni.cncf.io:v1alpha1 \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
-cp -r github.com/k8snetworkplumbingwg/whereabouts/pkg/client/* pkg/client
+cp -r aodsipam/pkg/client/* pkg/client
 

@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"net"
 
+	"aodsipam/pkg/allocate"
+	"aodsipam/pkg/config"
+	"aodsipam/pkg/logging"
+	"aodsipam/pkg/storage/kubernetes"
+	"aodsipam/pkg/types"
+	"aodsipam/pkg/version"
+
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
 	cniversion "github.com/containernetworking/cni/pkg/version"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/allocate"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/config"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/version"
 )
 
 func main() {

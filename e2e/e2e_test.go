@@ -21,14 +21,14 @@ import (
 
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 
-	wbtestclient "github.com/k8snetworkplumbingwg/whereabouts/e2e/client"
-	"github.com/k8snetworkplumbingwg/whereabouts/e2e/entities"
-	"github.com/k8snetworkplumbingwg/whereabouts/e2e/poolconsistency"
-	"github.com/k8snetworkplumbingwg/whereabouts/e2e/retrievers"
-	testenv "github.com/k8snetworkplumbingwg/whereabouts/e2e/testenvironment"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	wbstorage "github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	wbtestclient "aodsipam/e2e/client"
+	"aodsipam/e2e/entities"
+	"aodsipam/e2e/poolconsistency"
+	"aodsipam/e2e/retrievers"
+	testenv "aodsipam/e2e/testenvironment"
+	"aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	wbstorage "aodsipam/pkg/storage/kubernetes"
+	"aodsipam/pkg/types"
 )
 
 const (

@@ -13,8 +13,8 @@ import (
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	netclient "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/typed/k8s.cni.cncf.io/v1"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/e2e/entities"
-	wbclient "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned"
+	"aodsipam/e2e/entities"
+	wbclient "aodsipam/pkg/client/clientset/versioned"
 )
 
 const (

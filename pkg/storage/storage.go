@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/types"
 )
 
 var (

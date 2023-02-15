@@ -4,8 +4,8 @@
 package controlloop
 
 import (
+	kubeClient "aodsipam/pkg/storage/kubernetes"
 	"context"
-	kubeClient "github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
 	"net"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,10 +17,10 @@ import (
 	nadclient "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned"
 	nadinformers "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/informers/externalversions"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	wbclient "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned"
-	wbinformers "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	wbclient "aodsipam/pkg/client/clientset/versioned"
+	wbinformers "aodsipam/pkg/client/informers/externalversions"
+	"aodsipam/pkg/types"
 )
 
 type dummyPodController struct {

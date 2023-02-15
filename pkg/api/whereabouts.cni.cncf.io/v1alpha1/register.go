@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io"
+	api "aodsipam/pkg/api/whereabouts.cni.cncf.io"
 )
 
 // SchemeGroupVersion is group version used to register these objects

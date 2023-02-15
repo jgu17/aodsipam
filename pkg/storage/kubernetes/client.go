@@ -10,10 +10,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	whereaboutsv1alpha1 "github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	wbclient "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage"
+	whereaboutsv1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	wbclient "aodsipam/pkg/client/clientset/versioned"
+	"aodsipam/pkg/logging"
+	"aodsipam/pkg/storage"
 )
 
 // Client has info on how to connect to the kubernetes cluster

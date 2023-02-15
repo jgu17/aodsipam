@@ -14,8 +14,8 @@ import (
 
 	netutils "k8s.io/utils/net"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/logging"
+	"aodsipam/pkg/types"
 )
 
 // canonicalizeIP makes sure a provided ip is in standard form

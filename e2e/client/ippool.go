@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"time"
 
-	kubeClient "github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
+	kubeClient "aodsipam/pkg/storage/kubernetes"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 

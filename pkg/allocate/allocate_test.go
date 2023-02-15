@@ -7,7 +7,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -21,8 +21,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	scheme "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	scheme "aodsipam/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

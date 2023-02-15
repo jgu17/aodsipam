@@ -1,4 +1,4 @@
-module github.com/k8snetworkplumbingwg/whereabouts
+module aodsipam
 
 go 1.17
 

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -23,15 +24,15 @@ import (
 	nadinformers "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/informers/externalversions"
 	nadlister "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/listers/k8s.cni.cncf.io/v1"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/allocate"
-	whereaboutsv1alpha1 "github.com/k8snetworkplumbingwg/whereabouts/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	wbclientset "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned"
-	wbinformers "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions"
-	wblister "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/listers/whereabouts.cni.cncf.io/v1alpha1"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/config"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/logging"
-	wbclient "github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
+	"aodsipam/pkg/allocate"
+	whereaboutsv1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
+	wbclientset "aodsipam/pkg/client/clientset/versioned"
+	wbinformers "aodsipam/pkg/client/informers/externalversions"
+	wblister "aodsipam/pkg/client/listers/whereabouts.cni.cncf.io/v1alpha1"
+	"aodsipam/pkg/config"
+	"aodsipam/pkg/logging"
+	wbclient "aodsipam/pkg/storage/kubernetes"
+	"aodsipam/pkg/types"
 )
 
 const (

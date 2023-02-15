@@ -22,9 +22,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions/internalinterfaces"
-	whereaboutscnicncfio "github.com/k8snetworkplumbingwg/whereabouts/pkg/client/informers/externalversions/whereabouts.cni.cncf.io"
+	versioned "aodsipam/pkg/client/clientset/versioned"
+	internalinterfaces "aodsipam/pkg/client/informers/externalversions/internalinterfaces"
+	whereaboutscnicncfio "aodsipam/pkg/client/informers/externalversions/whereabouts.cni.cncf.io"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
