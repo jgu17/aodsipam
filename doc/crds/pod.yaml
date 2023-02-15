@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testpod1
+  annotations:
+    k8s.v1.cni.cncf.io/networks: default/whereabouts-conf
+spec:
+  containers:
+  - name: appcntr1
+    image: centos/tools
+    imagePullPolicy: IfNotPresent
+    command: [ "/bin/bash", "-c", "--" ]
+    args: [ "while true; do sleep 300000; done;" ]

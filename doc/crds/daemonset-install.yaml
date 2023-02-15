@@ -77,8 +77,6 @@ spec:
   selector:
     matchLabels:
       name: whereabouts
-  updateStrategy:
-    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -101,7 +99,7 @@ spec:
           - >
             SLEEP=false /install-cni.sh &&
             /ip-control-loop -log-level debug
-        image: ghcr.io/k8snetworkplumbingwg/whereabouts:op1
+        image: localhost/whereabouts:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: WHEREABOUTS_NAMESPACE
