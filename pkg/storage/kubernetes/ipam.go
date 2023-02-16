@@ -7,17 +7,13 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"aodsipam/pkg/allocate"
 	whereaboutsv1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
@@ -300,55 +296,6 @@ func (p *KubernetesIPPool) Update(ctx context.Context, reservations []whereabout
 	return nil
 }
 
-// newLeaderElector creates a new leaderelection.LeaderElector and associated
-// channels by which to observe elections and depositions.
-func newLeaderElector(clientset kubernetes.Interface, namespace string, podNamespace string, podID string, leaseDuration int, renewDeadline int, retryPeriod int) (*leaderelection.LeaderElector, chan struct{}, chan struct{}) {
-	//log.WithField("context", "leaderelection")
-	// leaderOK will block gRPC startup until it's closed.
-	leaderOK := make(chan struct{})
-	// deposed is closed by the leader election callback when
-	// we are deposed as leader so that we can clean up.
-	deposed := make(chan struct{})
-
-	var rl = &resourcelock.LeaseLock{
-		LeaseMeta: metav1.ObjectMeta{
-			Name:      "whereabouts",
-			Namespace: namespace,
-		},
-		Client: clientset.CoordinationV1(),
-		LockConfig: resourcelock.ResourceLockConfig{
-			Identity: fmt.Sprintf("%s/%s", podNamespace, podID),
-		},
-	}
-
-	// Make the leader elector, ready to be used in the Workgroup.
-	// !bang
-	le, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
-		Lock:            rl,
-		LeaseDuration:   time.Duration(leaseDuration) * time.Millisecond,
-		RenewDeadline:   time.Duration(renewDeadline) * time.Millisecond,
-		RetryPeriod:     time.Duration(retryPeriod) * time.Millisecond,
-		ReleaseOnCancel: true,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(_ context.Context) {
-				logging.Debugf("OnStartedLeading() called")
-				close(leaderOK)
-			},
-			OnStoppedLeading: func() {
-				logging.Debugf("OnStoppedLeading() called")
-				// The context being canceled will trigger a handler that will
-				// deal with being deposed.
-				close(deposed)
-			},
-		},
-	})
-	if err != nil {
-		logging.Errorf("Failed to create leader elector: %v", err)
-		return nil, leaderOK, deposed
-	}
-	return le, leaderOK, deposed
-}
-
 // IPManagement manages ip allocation and deallocation from a storage perspective
 func IPManagement(ctx context.Context, mode int, ipamConf whereaboutstypes.IPAMConfig, client *KubernetesIPAM) ([]net.IPNet, error) {
 	var newips []net.IPNet
@@ -357,57 +304,9 @@ func IPManagement(ctx context.Context, mode int, ipamConf whereaboutstypes.IPAMC
 		return newips, fmt.Errorf("IPAM client initialization error: no pod name")
 	}
 
-	// setup leader election
-	le, leader, deposed := newLeaderElector(client.clientSet, client.namespace, ipamConf.PodNamespace, ipamConf.PodName, ipamConf.LeaderLeaseDuration, ipamConf.LeaderRenewDeadline, ipamConf.LeaderRetryPeriod)
-	var wg sync.WaitGroup
-	wg.Add(2)
+	logging.Debugf("Elected as leader, do processing")
+	newips, err := IPManagementKubernetesUpdate(ctx, mode, client, ipamConf, client.containerID, ipamConf.GetPodRef())
 
-	stopM := make(chan struct{})
-	result := make(chan error, 2)
-
-	var err error
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				err = fmt.Errorf("time limit exceeded while waiting to become leader")
-				stopM <- struct{}{}
-				return
-			case <-leader:
-				logging.Debugf("Elected as leader, do processing")
-				newips, err = IPManagementKubernetesUpdate(ctx, mode, client, ipamConf, client.containerID, ipamConf.GetPodRef())
-				stopM <- struct{}{}
-				return
-			case <-deposed:
-				logging.Debugf("Deposed as leader, shutting down")
-				result <- nil
-				return
-			}
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		res := make(chan error)
-		leCtx, leCancel := context.WithCancel(context.Background())
-
-		go func() {
-			logging.Debugf("Started leader election")
-			le.Run(leCtx)
-			logging.Debugf("Finished leader election")
-			res <- nil
-		}()
-
-		// wait for stop which tells us when IP allocation occurred or context deadline exceeded
-		<-stopM
-		// leCancel fn(leCtx)
-		leCancel()
-		result <- (<-res)
-	}()
-
-	wg.Wait()
-	close(stopM)
 	logging.Debugf("IPManagement: %v, %v", newips, err)
 	return newips, err
 }

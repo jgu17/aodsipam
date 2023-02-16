@@ -4,7 +4,7 @@ kind: Pod
 metadata:
   name: testpod1
   annotations:
-    k8s.v1.cni.cncf.io/networks: default/whereabouts-conf
+    k8s.v1.cni.cncf.io/networks: default/aodsipam-conf
 spec:
   containers:
   - name: appcntr1

@@ -51,15 +51,8 @@ type IPAMConfig struct {
 	Routes                   []*cnitypes.Route    `json:"routes"`
 	Addresses                []Address            `json:"addresses,omitempty"`
 	IPRanges                 []RangeConfiguration `json:"ipRanges"`
-	OmitRanges               []string             `json:"exclude,omitempty"`
 	DNS                      cnitypes.DNS         `json:"dns"`
-	Range                    string               `json:"range"`
-	RangeStart               net.IP               `json:"range_start,omitempty"`
-	RangeEnd                 net.IP               `json:"range_end,omitempty"`
 	GatewayStr               string               `json:"gateway"`
-	LeaderLeaseDuration      int                  `json:"leader_lease_duration,omitempty"`
-	LeaderRenewDeadline      int                  `json:"leader_renew_deadline,omitempty"`
-	LeaderRetryPeriod        int                  `json:"leader_retry_period,omitempty"`
 	LogFile                  string               `json:"log_file"`
 	LogLevel                 string               `json:"log_level"`
 	ReconcilerCronExpression string               `json:"reconciler_cron_expression,omitempty"`
@@ -121,15 +114,8 @@ func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 		Routes:                   ipamConfigAlias.Routes,
 		Addresses:                ipamConfigAlias.Addresses,
 		IPRanges:                 ipamConfigAlias.IPRanges,
-		OmitRanges:               ipamConfigAlias.OmitRanges,
 		DNS:                      ipamConfigAlias.DNS,
-		Range:                    ipamConfigAlias.Range,
-		RangeStart:               backwardsCompatibleIPAddress(ipamConfigAlias.RangeStart),
-		RangeEnd:                 backwardsCompatibleIPAddress(ipamConfigAlias.RangeEnd),
 		GatewayStr:               ipamConfigAlias.GatewayStr,
-		LeaderLeaseDuration:      ipamConfigAlias.LeaderLeaseDuration,
-		LeaderRenewDeadline:      ipamConfigAlias.LeaderRenewDeadline,
-		LeaderRetryPeriod:        ipamConfigAlias.LeaderRetryPeriod,
 		LogFile:                  ipamConfigAlias.LogFile,
 		LogLevel:                 ipamConfigAlias.LogLevel,
 		OverlappingRanges:        ipamConfigAlias.OverlappingRanges,

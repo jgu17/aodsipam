@@ -11,15 +11,15 @@ set -u -e
 #SPDX-License-Identifier: Apache-2.0
 
 CNI_BIN_DIR=${CNI_BIN_DIR:-"/host/opt/cni/bin/"}
-WHEREABOUTS_KUBECONFIG_FILE_HOST=${WHEREABOUTS_KUBECONFIG_FILE_HOST:-"/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig"}
+AODSIPAM_KUBECONFIG_FILE_HOST=${AODSIPAM_KUBECONFIG_FILE_HOST:-"/etc/cni/net.d/aodsipam.d/aodsipam.kubeconfig"}
 CNI_CONF_DIR=${CNI_CONF_DIR:-"/host/etc/cni/net.d"}
 
-# Make a whereabouts.d directory (for our kubeconfig)
+# Make a aodsipam.d directory (for our kubeconfig)
 
-mkdir -p $CNI_CONF_DIR/whereabouts.d
-WHEREABOUTS_KUBECONFIG=$CNI_CONF_DIR/whereabouts.d/whereabouts.kubeconfig
-WHEREABOUTS_FLATFILE=$CNI_CONF_DIR/whereabouts.d/whereabouts.conf
-WHEREABOUTS_KUBECONFIG_LITERAL=$(echo "$WHEREABOUTS_KUBECONFIG" | sed -e s'|/host||')
+mkdir -p $CNI_CONF_DIR/aodsipam.d
+AODSIPAM_KUBECONFIG=$CNI_CONF_DIR/aodsipam.d/aodsipam.kubeconfig
+AODSIPAM_FLATFILE=$CNI_CONF_DIR/aodsipam.d/aodsipam.conf
+AODSIPAM_KUBECONFIG_LITERAL=$(echo "$AODSIPAM_KUBECONFIG" | sed -e s'|/host||')
 
 # ------------------------------- Generate a "kube-config"
 SERVICE_ACCOUNT_PATH=/var/run/secrets/kubernetes.io/serviceaccount
@@ -71,9 +71,9 @@ if [ -f "$SERVICE_ACCOUNT_PATH/token" ]; then
   # to skip TLS verification for now.  We should eventually support
   # writing more complete kubeconfig files. This is only used
   # if the provided CNI network config references it.
-  touch $WHEREABOUTS_KUBECONFIG
-  chmod ${KUBECONFIG_MODE:-600} $WHEREABOUTS_KUBECONFIG
-  cat > $WHEREABOUTS_KUBECONFIG <<EOF
+  touch $AODSIPAM_KUBECONFIG
+  chmod ${KUBECONFIG_MODE:-600} $AODSIPAM_KUBECONFIG
+  cat > $AODSIPAM_KUBECONFIG <<EOF
 # Kubeconfig file for Multus CNI plugin.
 apiVersion: v1
 kind: Config
@@ -83,27 +83,27 @@ clusters:
     server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://${KUBERNETES_SERVICE_HOST_WRAP}:${KUBERNETES_SERVICE_PORT}
     $TLS_CFG
 users:
-- name: whereabouts
+- name: aodsipam
   user:
     token: "${SERVICEACCOUNT_TOKEN}"
 contexts:
-- name: whereabouts-context
+- name: aodsipam-context
   context:
     cluster: local
-    user: whereabouts
-    namespace: ${WHEREABOUTS_NAMESPACE}
-current-context: whereabouts-context
+    user: aodsipam
+    namespace: ${AODSIPAM_NAMESPACE}
+current-context: aodsipam-context
 EOF
 
-  touch $WHEREABOUTS_FLATFILE
-  chmod ${KUBECONFIG_MODE:-600} $WHEREABOUTS_FLATFILE
-  cat > $WHEREABOUTS_FLATFILE <<EOF
+  touch $AODSIPAM_FLATFILE
+  chmod ${KUBECONFIG_MODE:-600} $AODSIPAM_FLATFILE
+  cat > $AODSIPAM_FLATFILE <<EOF
 {
   "datastore": "kubernetes",
   "kubernetes": {
-    "kubeconfig": "${WHEREABOUTS_KUBECONFIG_LITERAL}"
+    "kubeconfig": "${AODSIPAM_KUBECONFIG_LITERAL}"
   },
-  "log_file": "/tmp/whereabouts.log",
+  "log_file": "/tmp/aodsipam.log",
   "log_level": "debug",
   "reconciler_cron_expression": "30 4 * * *"
 }

@@ -2,11 +2,11 @@
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: whereabouts-conf
+  name: aodsipam-conf
 spec:
   config: '{
       "cniVersion": "0.3.0",
-      "name": "whereaboutsexample",
+      "name": "aodsipamexample",
       "type": "macvlan",
       "master": "eth0",
       "mode": "bridge",

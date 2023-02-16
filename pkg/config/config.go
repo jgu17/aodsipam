@@ -78,52 +78,6 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 		logging.Debugf("Used defaults from parsed flat file config @ %s", foundflatfile)
 	}
 
-	if n.IPAM.Range != "" {
-
-		oldRange := types.RangeConfiguration{
-			OmitRanges: n.IPAM.OmitRanges,
-			Range:      n.IPAM.Range,
-			RangeStart: n.IPAM.RangeStart,
-			RangeEnd:   n.IPAM.RangeEnd,
-		}
-
-		n.IPAM.IPRanges = append([]types.RangeConfiguration{oldRange}, n.IPAM.IPRanges...)
-	}
-
-	for idx := range n.IPAM.IPRanges {
-		if r := strings.SplitN(n.IPAM.IPRanges[idx].Range, "-", 2); len(r) == 2 {
-			firstip := netutils.ParseIPSloppy(r[0])
-			if firstip == nil {
-				return nil, "", fmt.Errorf("invalid range start IP: %s", r[0])
-			}
-			lastip, ipNet, err := netutils.ParseCIDRSloppy(r[1])
-			if err != nil {
-				return nil, "", fmt.Errorf("invalid CIDR (do you have the 'range' parameter set for Whereabouts?) '%s': %s", r[1], err)
-			}
-			if !ipNet.Contains(firstip) {
-				return nil, "", fmt.Errorf("invalid range start for CIDR %s: %s", ipNet.String(), firstip)
-			}
-			n.IPAM.IPRanges[idx].Range = ipNet.String()
-			n.IPAM.IPRanges[idx].RangeStart = firstip
-			n.IPAM.IPRanges[idx].RangeEnd = lastip
-		} else {
-			firstip, ipNet, err := netutils.ParseCIDRSloppy(n.IPAM.IPRanges[idx].Range)
-			if err != nil {
-				return nil, "", fmt.Errorf("invalid CIDR %s: %s", n.IPAM.IPRanges[idx].Range, err)
-			}
-			n.IPAM.IPRanges[idx].Range = ipNet.String()
-			if n.IPAM.IPRanges[idx].RangeStart == nil {
-				firstip = netutils.ParseIPSloppy(firstip.Mask(ipNet.Mask).String()) // if range_start is not net then pick the first network address
-				n.IPAM.IPRanges[idx].RangeStart = firstip
-			}
-		}
-	}
-
-	n.IPAM.OmitRanges = nil
-	n.IPAM.Range = ""
-	n.IPAM.RangeStart = nil
-	n.IPAM.RangeEnd = nil
-
 	if n.IPAM.Kubernetes.KubeConfigPath == "" {
 		return nil, "", storageError()
 	}
@@ -135,27 +89,9 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 		}
 		n.IPAM.Gateway = gwip
 	}
-	for i := range n.IPAM.OmitRanges {
-		_, _, err := netutils.ParseCIDRSloppy(n.IPAM.OmitRanges[i])
-		if err != nil {
-			return nil, "", fmt.Errorf("invalid CIDR in exclude list %s: %s", n.IPAM.OmitRanges[i], err)
-		}
-	}
 
 	if err := configureStatic(&n, args); err != nil {
 		return nil, "", err
-	}
-
-	if n.IPAM.LeaderLeaseDuration == 0 {
-		n.IPAM.LeaderLeaseDuration = types.DefaultLeaderLeaseDuration
-	}
-
-	if n.IPAM.LeaderRenewDeadline == 0 {
-		n.IPAM.LeaderRenewDeadline = types.DefaultLeaderRenewDeadline
-	}
-
-	if n.IPAM.LeaderRetryPeriod == 0 {
-		n.IPAM.LeaderRetryPeriod = types.DefaultLeaderRetryPeriod
 	}
 
 	// Copy net name into IPAM so not to drag Net struct around
@@ -224,7 +160,7 @@ func configureStatic(n *types.Net, args types.IPAMEnvArgs) error {
 
 func GetFlatIPAM(isControlLoop bool, IPAM *types.IPAMConfig, extraConfigPaths ...string) (types.Net, string, error) {
 	// Once we have our basics, let's look for our (optional) configuration file
-	confdirs := []string{"/etc/kubernetes/cni/net.d/whereabouts.d/whereabouts.conf", "/etc/cni/net.d/whereabouts.d/whereabouts.conf", "/host/etc/cni/net.d/whereabouts.d/whereabouts.conf"}
+	confdirs := []string{"/etc/kubernetes/cni/net.d/aodsipam.d/aodsipam.conf", "/etc/cni/net.d/aodsipam.d/aodsipam.conf", "/host/etc/cni/net.d/aodsipam.d/aodsipam.conf"}
 	confdirs = append(confdirs, extraConfigPaths...)
 	// We prefix the optional configuration path (so we look there first)
 
@@ -367,7 +303,7 @@ func NewInvalidPluginError(ipamType string) *InvalidPluginError {
 }
 
 func (e *InvalidPluginError) Error() string {
-	return fmt.Sprintf("only interested in networks whose IPAM type is 'whereabouts'. This one was: %s", e.ipamType)
+	return fmt.Sprintf("only interested in networks whose IPAM type is 'aodsipam'. This one was: %s", e.ipamType)
 }
 
 func storageError() error {

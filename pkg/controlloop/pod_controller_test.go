@@ -242,9 +242,9 @@ func dummyWhereaboutsConfig() string {
 	return `{
       "datastore": "kubernetes",
       "kubernetes": {
-        "kubeconfig": "/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig"
+        "kubeconfig": "/etc/cni/net.d/aodsipam.d/aodsipam.kubeconfig"
       },
-      "log_file": "/tmp/whereabouts.log",
+      "log_file": "/tmp/aodsipam.log",
       "log_level": "verbose"
     }
 `

@@ -39,7 +39,7 @@ const (
 	defaultMountPath      = "/host"
 	ipReconcilerQueueName = "pod-updates"
 	syncPeriod            = time.Second
-	whereaboutsConfigPath = "/etc/cni/net.d/whereabouts.d/whereabouts.conf"
+	whereaboutsConfigPath = "/etc/cni/net.d/aodsipam.d/aodsipam.conf"
 	maxRetries            = 2
 )
 

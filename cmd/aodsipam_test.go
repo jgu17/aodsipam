@@ -29,7 +29,7 @@ import (
 	"aodsipam/pkg/client/clientset/versioned/fake"
 	"aodsipam/pkg/config"
 	"aodsipam/pkg/storage/kubernetes"
-	whereaboutstypes "aodsipam/pkg/types"
+	aodsipamtypes "aodsipam/pkg/types"
 )
 
 const whereaboutsConfigFile = "whereabouts.kubeconfig"
@@ -42,7 +42,7 @@ func TestAPIs(t *testing.T) {
 		[]Reporter{})
 }
 
-func AllocateAndReleaseAddressesTest(ipVersion string, ipamConf *whereaboutstypes.IPAMConfig, expectedAddresses []string) {
+func AllocateAndReleaseAddressesTest(ipVersion string, ipamConf *aodsipamtypes.IPAMConfig, expectedAddresses []string) {
 	const (
 		ifname       string = "eth0"
 		nspath       string = "/some/where"
@@ -1338,7 +1338,7 @@ func cniArgs(podNamespace string, podName string) string {
 	return fmt.Sprintf("IgnoreUnknown=1;K8S_POD_NAMESPACE=%s;K8S_POD_NAME=%s", podNamespace, podName)
 }
 
-func newK8sIPAM(containerID string, ipamConf *whereaboutstypes.IPAMConfig, k8sCoreClient k8sclient.Interface, wbClient wbclientset.Interface) *kubernetes.KubernetesIPAM {
+func newK8sIPAM(containerID string, ipamConf *aodsipamtypes.IPAMConfig, k8sCoreClient k8sclient.Interface, wbClient wbclientset.Interface) *kubernetes.KubernetesIPAM {
 	k8sIPAM, err := kubernetes.NewKubernetesIPAMWithNamespace(containerID, *ipamConf, ipamConf.PodNamespace)
 	if err != nil {
 		return nil
@@ -1347,7 +1347,7 @@ func newK8sIPAM(containerID string, ipamConf *whereaboutstypes.IPAMConfig, k8sCo
 	return k8sIPAM
 }
 
-func mutateK8sIPAM(containerID string, ipamConf *whereaboutstypes.IPAMConfig, client kubernetes.Client) *kubernetes.KubernetesIPAM {
+func mutateK8sIPAM(containerID string, ipamConf *aodsipamtypes.IPAMConfig, client kubernetes.Client) *kubernetes.KubernetesIPAM {
 	k8sIPAM, err := kubernetes.NewKubernetesIPAMWithNamespace(containerID, *ipamConf, ipamConf.PodNamespace)
 	if err != nil {
 		return nil
@@ -1365,25 +1365,20 @@ func mustCIDR(s string) net.IPNet {
 	return *n
 }
 
-func ipamConfig(podName string, namespace string, ipRange string, gw string, kubeconfigPath string) *whereaboutstypes.IPAMConfig {
+func ipamConfig(podName string, namespace string, ipRange string, gw string, kubeconfigPath string) *aodsipamtypes.IPAMConfig {
 	const (
 		cniVersion = "0.3.1"
 		netName    = "net1"
 	)
 
-	ipamConf := &whereaboutstypes.IPAMConfig{
-		Name:                netName,
-		Type:                "whereabouts",
-		Range:               ipRange,
-		GatewayStr:          gw,
-		LeaderRenewDeadline: 5,
-		LeaderLeaseDuration: 10,
-		LeaderRetryPeriod:   2,
-		Kubernetes: whereaboutstypes.KubernetesConfig{
+	ipamConf := &aodsipamtypes.IPAMConfig{
+		Name: netName,
+		Type: "aodsipam",
+		Kubernetes: aodsipamtypes.KubernetesConfig{
 			KubeConfigPath: kubeconfigPath,
 		},
 	}
-	bytes, err := json.Marshal(&whereaboutstypes.Net{
+	bytes, err := json.Marshal(&aodsipamtypes.Net{
 		Name:       netName,
 		CNIVersion: cniVersion,
 		IPAM:       ipamConf,
@@ -1454,12 +1449,12 @@ func allocations(podReferences ...string) map[string]v1alpha1.IPAllocation {
 	return poolAllocations
 }
 
-func newCNINetConf(cniVersion string, ipamConfig *whereaboutstypes.IPAMConfig) ([]byte, error) {
-	netConf := whereaboutstypes.NetConfList{
+func newCNINetConf(cniVersion string, ipamConfig *aodsipamtypes.IPAMConfig) ([]byte, error) {
+	netConf := aodsipamtypes.NetConfList{
 		CNIVersion:   cniVersion,
 		Name:         ipamConfig.Name,
 		DisableCheck: true,
-		Plugins: []*whereaboutstypes.Net{
+		Plugins: []*aodsipamtypes.Net{
 			{
 				Name:       ipamConfig.Name,
 				CNIVersion: cniVersion,
