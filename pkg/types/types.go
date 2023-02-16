@@ -55,8 +55,8 @@ type IPAMConfig struct {
 	GatewayStr               string               `json:"gateway"`
 	LogFile                  string               `json:"log_file"`
 	LogLevel                 string               `json:"log_level"`
-	ReconcilerCronExpression string               `json:"reconciler_cron_expression,omitempty"`
 	OverlappingRanges        bool                 `json:"enable_overlapping_ranges,omitempty"`
+	ReconcilerCronExpression string               `json:"reconciler_cron_expression,omitempty"`
 	SleepForRace             int                  `json:"sleep_for_race,omitempty"`
 	Gateway                  net.IP
 	Kubernetes               KubernetesConfig `json:"kubernetes,omitempty"`
@@ -118,7 +118,6 @@ func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 		GatewayStr:               ipamConfigAlias.GatewayStr,
 		LogFile:                  ipamConfigAlias.LogFile,
 		LogLevel:                 ipamConfigAlias.LogLevel,
-		OverlappingRanges:        ipamConfigAlias.OverlappingRanges,
 		ReconcilerCronExpression: ipamConfigAlias.ReconcilerCronExpression,
 		SleepForRace:             ipamConfigAlias.SleepForRace,
 		Gateway:                  backwardsCompatibleIPAddress(ipamConfigAlias.Gateway),

@@ -72,37 +72,37 @@ func cmdAdd(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM, cniVersion st
 	result.Routes = client.Config.Routes
 
 	logging.Debugf("Beginning IPAM for ContainerID: %v", args.ContainerID)
-	//var newips []net.IPNet
+	var newips []net.IPNet
 
-	// ctx, cancel := context.WithTimeout(context.Background(), types.AddTimeLimit)
-	// defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), types.AddTimeLimit)
+	defer cancel()
 
-	// newips, err := kubernetes.IPManagement(ctx, types.Allocate, client.Config, client)
-	// if err != nil {
-	// 	logging.Errorf("Error at storage engine: %s", err)
-	// 	return fmt.Errorf("error at storage engine: %w", err)
+	newips, err := kubernetes.IPManagement1(ctx, types.Allocate, client.Config, client)
+	if err != nil {
+		logging.Errorf("Error at storage engine: %s", err)
+		return fmt.Errorf("error at storage engine: %w", err)
+	}
+
+	// 2023-02-15T03:52:38Z [debug] newips static3--------------------: [{192.168.2.225 ffffffff}]
+	// ////2023-02-15T03:52:38Z [debug] result----------------------: &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
+	// 2023-02-15T03:38:15Z [debug] newips static4--------------------: [{192.168.2.225 ffffffff}]
+	// ////2023-02-15T03:38:15Z [debug] result----------------------:  &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
+	// 2023-02-15T03:27:02Z [debug] newips static3--------------------: [{192.168.2.225 ffffffff}]
+	// /////2023-02-15T03:27:02Z [debug] result----------------------: &{0.4.0 [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
+
+	// newips = make([]net.IPNet, 1)
+
+	// ipaddress := "192.168.2.225"
+	// //mask := "fffffff0"
+
+	// ipnet := net.IPNet{
+	// 	IP:   net.ParseIP(ipaddress),
+	// 	Mask: net.CIDRMask(32, 32),
 	// }
 
-	//2023-02-15T03:52:38Z [debug] newips static3--------------------: [{192.168.2.225 ffffffff}]
-	//////2023-02-15T03:52:38Z [debug] result----------------------: &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
-	//2023-02-15T03:38:15Z [debug] newips static4--------------------: [{192.168.2.225 ffffffff}]
-	//////2023-02-15T03:38:15Z [debug] result----------------------:  &{ [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
-	// 2023-02-15T03:27:02Z [debug] newips static3--------------------: [{192.168.2.225 ffffffff}]
-	///////2023-02-15T03:27:02Z [debug] result----------------------: &{0.4.0 [] [{Version:4 Interface:<nil> Address:{IP:192.168.2.225 Mask:ffffffff} Gateway:<nil>}] [] {[]  [] []}}
-
-	//newips = make([]net.IPNet, 1)
-
-	ipaddress := "192.168.2.225"
-	//mask := "fffffff0"
-
-	ipnet := net.IPNet{
-		IP:   net.ParseIP(ipaddress),
-		Mask: net.CIDRMask(32, 32),
-	}
-
-	newips := []net.IPNet{
-		ipnet,
-	}
+	// newips := []net.IPNet{
+	// 	ipnet,
+	// }
 	logging.Debugf("newips static3--------------------: %v", newips)
 
 	var useVersion string
@@ -138,7 +138,7 @@ func cmdDel(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM) error {
 	ctx, cancel := context.WithTimeout(context.Background(), types.DelTimeLimit)
 	defer cancel()
 
-	_, err := kubernetes.IPManagement(ctx, types.Deallocate, client.Config, client)
+	_, err := kubernetes.IPManagement1(ctx, types.Deallocate, client.Config, client)
 	if err != nil {
 		logging.Verbosef("WARNING: Problem deallocating IP: %s", err)
 	}

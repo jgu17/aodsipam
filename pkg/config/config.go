@@ -10,7 +10,6 @@ import (
 
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	types020 "github.com/containernetworking/cni/pkg/types/020"
-	"github.com/imdario/mergo"
 
 	netutils "k8s.io/utils/net"
 
@@ -53,18 +52,10 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 	n.IPAM.PodName = string(args.K8S_POD_NAME)
 	n.IPAM.PodNamespace = string(args.K8S_POD_NAMESPACE)
 
-	flatipam, foundflatfile, err := GetFlatIPAM(false, n.IPAM, extraConfigPaths...)
+	_, foundflatfile, err := GetFlatIPAM(false, n.IPAM, extraConfigPaths...)
 	if err != nil {
 		return nil, "", err
 	}
-
-	// Now let's try to merge the configurations...
-	// NB: Don't try to do any initialization before this point or it won't account for merged flat file.
-	var OverlappingRanges bool = n.IPAM.OverlappingRanges
-	if err := mergo.Merge(&n, flatipam); err != nil {
-		logging.Errorf("Merge error with flat file: %s", err)
-	}
-	n.IPAM.OverlappingRanges = OverlappingRanges
 
 	// Logging
 	if n.IPAM.LogFile != "" {

@@ -24,7 +24,7 @@ metadata:
   name: aodsipam-cni
 rules:
 - apiGroups:
-  - aodsipam.cni.cncf.io
+  - whereabouts.cni.cncf.io
   resources:
   - ippools
   - overlappingrangeipreservations
@@ -62,6 +62,84 @@ rules:
     - events
   verbs:
   - create
+  - patch
+  - update
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipaddresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipaddresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipaddresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipclaims/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipclaims/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ippools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ippools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ippools/status
+  verbs:
+  - get
   - patch
   - update
 ---

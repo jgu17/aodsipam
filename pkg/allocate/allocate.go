@@ -1,12 +1,26 @@
 package allocate
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"math"
 	"net"
+	"time"
 
 	"aodsipam/pkg/logging"
 	"aodsipam/pkg/types"
+
+	apitypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	ipamv1 "github.com/metal3-io/ip-address-manager/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AssignmentError defines an IP assignment error.
@@ -34,6 +48,91 @@ func AssignIP(ipamConf types.RangeConfiguration, reservelist []types.IPReservati
 	return net.IPNet{IP: newip, Mask: ipnet.Mask}, updatedreservelist, nil
 }
 
+// AssignIP assigns an IP using a range and a reserve list.
+func AssignIP1(containerID string, podRef string) (net.IPNet, error) {
+
+	crScheme := runtime.NewScheme()
+	ipamv1.AddToScheme(crScheme)
+	config, err := rest.InClusterConfig()
+	if err != nil {
+
+		return net.IPNet{}, err
+	}
+	cl, err := client.New(config, client.Options{
+		Scheme: crScheme,
+	})
+
+	if err != nil {
+		return net.IPNet{}, err
+	}
+
+	foundIPPool := &ipamv1.IPPool{}
+	err = cl.Get(context.Background(), apitypes.NamespacedName{Name: "l3network11-ipv4"}, foundIPPool)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logging.Debugf("ip pool does not exist")
+			return net.IPNet{}, err
+		}
+		logging.Errorf("could not get ippool", err)
+		return net.IPNet{}, err
+	}
+
+	ipClaim := &ipamv1.IPClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "l3network-504-32eb7f2f-ipv4",
+		},
+		Spec: ipamv1.IPClaimSpec{
+			Pool: corev1.ObjectReference{
+				Name: "l3network11-ipv4",
+			},
+		},
+	}
+
+	// IPClaim Status not getting updated when claim is in different namespace than pool
+	logging.Debugf("Creating IP Claim -- ipClaim: %v ", ipClaim)
+	err = cl.Create(context.Background(), ipClaim)
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			logging.Debugf("createIPv4Claim: ipclaim already exist: l3network-504-32eb7f2f-ipv4")
+		} else {
+			return net.IPNet{}, err
+		}
+	}
+
+	// Setup the basics here.
+	_, ipnet, _ := net.ParseCIDR(string(*foundIPPool.Spec.Pools[0].Subnet))
+
+	var timeout = flag.Int("timeout", 30, "timeout in seconds")
+
+	err = waitForPodRunning(cl, "default", "l3network-504-32eb7f2f-ipv4", time.Duration(*timeout)*time.Second)
+	if err != nil {
+		return net.IPNet{}, fmt.Errorf("The ipclaim never returned ip address")
+	}
+
+	err = cl.Get(context.Background(), apitypes.NamespacedName{Name: "l3network-504-32eb7f2f-ipv4", Namespace: "default"}, ipClaim)
+	if err != nil {
+		return net.IPNet{}, fmt.Errorf("Error in retriving the ipclaim")
+	}
+
+	if ipClaim.Status.Address == nil {
+		return net.IPNet{}, fmt.Errorf("ipclaim did not return ip address")
+	}
+
+	logging.Debugf("performIPv4Allocation: foundIPClaim.Status.Address.Name: " + ipClaim.Status.Address.Name)
+	rnClaimIPAddress := &ipamv1.IPAddress{}
+	err = cl.Get(context.Background(), apitypes.NamespacedName{Namespace: ipClaim.Status.Address.Namespace, Name: ipClaim.Status.Address.Name}, rnClaimIPAddress)
+	if err != nil {
+		return net.IPNet{}, fmt.Errorf("Error in retriving the ipaddress")
+	}
+	logging.Debugf("rnClaimIPAddress.Spec.Address: %s", rnClaimIPAddress.Spec.Address)
+	logging.Debugf("rnClaimIPAddress.Spec.Prefix: %d", rnClaimIPAddress.Spec.Prefix)
+	fullClaim := string(rnClaimIPAddress.Spec.Address) + "/" + fmt.Sprint(rnClaimIPAddress.Spec.Prefix)
+	logging.Debugf("fullClaim: %s", fullClaim)
+	newip := net.ParseIP(string(rnClaimIPAddress.Spec.Address))
+
+	return net.IPNet{IP: newip, Mask: ipnet.Mask}, nil
+}
+
 // DeallocateIP assigns an IP using a range and a reserve list.
 func DeallocateIP(reservelist []types.IPReservation, containerID string) ([]types.IPReservation, net.IP, error) {
 
@@ -45,6 +144,71 @@ func DeallocateIP(reservelist []types.IPReservation, containerID string) ([]type
 	logging.Debugf("Deallocating given previously used IP: %v", hadip)
 
 	return updatedreservelist, hadip, nil
+}
+
+// DeallocateIP assigns an IP using a range and a reserve list.
+func DeallocateIP1(containerID string) (net.IP, error) {
+
+	crScheme := runtime.NewScheme()
+	ipamv1.AddToScheme(crScheme)
+	config, err := rest.InClusterConfig()
+	if err != nil {
+
+		return nil, err
+	}
+	cl, err := client.New(config, client.Options{
+		Scheme: crScheme,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	ipClaim := &ipamv1.IPClaim{}
+	err = cl.Get(context.Background(), apitypes.NamespacedName{Name: "l3network-504-32eb7f2f-ipv4", Namespace: "default"}, ipClaim)
+	if err != nil {
+		return nil, fmt.Errorf("Error in retriving the ipclaim")
+	}
+
+	if ipClaim.Status.Address == nil {
+		return nil, fmt.Errorf("ipclaim did not return ip address")
+	}
+
+	logging.Debugf("Deleting the ipclaim: " + ipClaim.Status.Address.Name)
+	err = cl.Delete(context.Background(), ipClaim)
+	if err != nil {
+		return nil, fmt.Errorf("Error in deleting the ipclaim")
+	}
+
+	logging.Debugf("Deallocating given previously used IP: %v", ipClaim.Status.Address)
+
+	return nil, nil
+}
+
+// return a condition function that indicates whether the given pod is
+// currently running
+func getIPAddress(cl client.Client, ipclaimName, namespace string) wait.ConditionFunc {
+	return func() (bool, error) {
+		fmt.Printf(".") // progress bar!
+
+		ipClaim := &ipamv1.IPClaim{}
+		err := cl.Get(context.Background(), apitypes.NamespacedName{Name: ipclaimName}, ipClaim)
+		if err != nil {
+			return false, err
+		}
+
+		if ipClaim.Status.Address == nil {
+			return false, fmt.Errorf("ipclaim ran to completion")
+		} else {
+			return true, nil
+		}
+	}
+}
+
+// Poll up to timeout seconds for pod to enter running state.
+// Returns an error if the pod never enters the running state.
+func waitForPodRunning(cl client.Client, namespace, ipclaimName string, timeout time.Duration) error {
+	return wait.PollImmediate(time.Second, timeout, getIPAddress(cl, ipclaimName, namespace))
 }
 
 // IterateForDeallocation iterates overs currently reserved IPs and the deallocates given the container id.

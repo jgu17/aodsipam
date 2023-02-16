@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -u -e
+set -x
 
 # Inspired by: https://github.com/intel/multus-cni/blob/83556f49bd6706a885eda847210b542669279cd0/images/entrypoint.sh#L161-L222
 #
