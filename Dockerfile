@@ -7,6 +7,5 @@ RUN ./hack/build-go.sh
 
 FROM alpine:latest
 COPY --from=0 /go/src/aodsipam/bin/aodsipam .
-COPY --from=0 /go/src/aodsipam/bin/ip-control-loop .
 COPY script/install-cni.sh .
 CMD ["/install-cni.sh"]

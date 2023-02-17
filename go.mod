@@ -3,12 +3,9 @@ module aodsipam
 go 1.19
 
 require (
-	github.com/blang/semver v3.5.1+incompatible
 	github.com/containernetworking/cni v0.8.1
-	github.com/go-co-op/gocron v1.13.0
 	github.com/imdario/mergo v0.3.12
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.1-0.20210510153419-66a699ae3b05
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
 	github.com/pkg/errors v0.9.1
@@ -21,6 +18,7 @@ require (
 )
 
 require (
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/metal3-io/ip-address-manager/api v0.0.0-20230216141304-1eb3237d8aed
 	sigs.k8s.io/controller-runtime v0.14.4
 )
@@ -35,8 +33,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	k8s.io/apiextensions-apiserver v0.26.1 // indirect
 	k8s.io/component-base v0.26.1 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect

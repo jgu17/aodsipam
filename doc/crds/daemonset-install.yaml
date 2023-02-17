@@ -162,8 +162,7 @@ spec:
         args:
           - -c
           - >
-            SLEEP=false /install-cni.sh &&
-            /ip-control-loop -log-level debug
+            SLEEP=true /install-cni.sh
         image: localhost/aodsipam:latest
         imagePullPolicy: IfNotPresent
         env:

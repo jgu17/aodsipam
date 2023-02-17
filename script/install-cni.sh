@@ -114,7 +114,7 @@ else
   warn "Doesn't look like we're running in a kubernetes environment (no serviceaccount token)"
 fi
 
-# copy whereabouts to the cni bin dir
+# copy aodsipam to the cni bin dir
 cp -f /aodsipam $CNI_BIN_DIR
 
 # ---------------------- end Generate a "kube-config".

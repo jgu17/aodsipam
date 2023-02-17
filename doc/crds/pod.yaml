@@ -2,12 +2,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: testpod1
+  name: testpod21
   annotations:
     k8s.v1.cni.cncf.io/networks: default/aodsipam-conf
 spec:
   containers:
-  - name: appcntr1
+  - name: appcntr21
     image: centos/tools
     imagePullPolicy: IfNotPresent
     command: [ "/bin/bash", "-c", "--" ]
