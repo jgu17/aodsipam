@@ -36,10 +36,5 @@ func ReconcileIPs(errorChan chan error) {
 		logging.Debugf("no IP addresses to cleanup")
 	}
 
-	if err := ipReconcileLoop.ReconcileOverlappingIPAddresses(ctx); err != nil {
-		errorChan <- err
-		return
-	}
-
 	errorChan <- nil
 }

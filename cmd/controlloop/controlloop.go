@@ -21,8 +21,6 @@ import (
 	nadclient "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned"
 	nadinformers "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/informers/externalversions"
 
-	wbclient "aodsipam/pkg/client/clientset/versioned"
-	wbinformers "aodsipam/pkg/client/informers/externalversions"
 	"aodsipam/pkg/config"
 	"aodsipam/pkg/controlloop"
 	"aodsipam/pkg/logging"
@@ -124,13 +122,7 @@ func newPodController(stopChannel chan struct{}) (*controlloop.PodController, er
 
 	eventBroadcaster := newEventBroadcaster(k8sClientSet)
 
-	wbClientSet, err := wbclient.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	const noResyncPeriod = 0
-	ipPoolInformerFactory := wbinformers.NewSharedInformerFactory(wbClientSet, noResyncPeriod)
 	netAttachDefInformerFactory := nadinformers.NewSharedInformerFactory(nadK8sClientSet, noResyncPeriod)
 	podInformerFactory := v1coreinformerfactory.NewSharedInformerFactoryWithOptions(
 		k8sClientSet, noResyncPeriod, v1coreinformerfactory.WithTweakListOptions(
@@ -144,9 +136,7 @@ func newPodController(stopChannel chan struct{}) (*controlloop.PodController, er
 
 	controller := controlloop.NewPodController(
 		k8sClientSet,
-		wbClientSet,
 		podInformerFactory,
-		ipPoolInformerFactory,
 		netAttachDefInformerFactory,
 		eventBroadcaster,
 		newEventRecorder(eventBroadcaster))
@@ -155,7 +145,6 @@ func newPodController(stopChannel chan struct{}) (*controlloop.PodController, er
 	logging.Verbosef("Starting informer factories ...")
 	podInformerFactory.Start(stopChannel)
 	netAttachDefInformerFactory.Start(stopChannel)
-	ipPoolInformerFactory.Start(stopChannel)
 	logging.Verbosef("Informer factories started")
 
 	return controller, nil

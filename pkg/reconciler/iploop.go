@@ -9,7 +9,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"aodsipam/pkg/allocate"
-	whereaboutsv1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
 	"aodsipam/pkg/logging"
 	"aodsipam/pkg/storage"
 	"aodsipam/pkg/storage/kubernetes"
@@ -17,11 +16,10 @@ import (
 )
 
 type ReconcileLooper struct {
-	k8sClient              kubernetes.Client
-	liveWhereaboutsPods    map[string]podWrapper
-	orphanedIPs            []OrphanedIPReservations
-	orphanedClusterWideIPs []whereaboutsv1alpha1.OverlappingRangeIPReservation
-	requestTimeout         int
+	k8sClient           kubernetes.Client
+	liveWhereaboutsPods map[string]podWrapper
+	orphanedIPs         []OrphanedIPReservations
+	requestTimeout      int
 }
 
 type OrphanedIPReservations struct {
@@ -29,17 +27,9 @@ type OrphanedIPReservations struct {
 	Allocations []types.IPReservation
 }
 
-func NewReconcileLooperWithKubeconfig(ctx context.Context, kubeconfigPath string, timeout int) (*ReconcileLooper, error) {
-	logging.Debugf("NewReconcileLooper - Kubernetes config file located at: %s", kubeconfigPath)
-	k8sClient, err := kubernetes.NewClientViaKubeconfig(kubeconfigPath, time.Duration(timeout)*time.Second)
-	if err != nil {
-		return nil, logging.Errorf("failed to instantiate the Kubernetes client: %+v", err)
-	}
-	return NewReconcileLooperWithClient(ctx, k8sClient, timeout)
-}
-
 func NewReconcileLooper(ctx context.Context, timeout int) (*ReconcileLooper, error) {
 	logging.Debugf("NewReconcileLooper - inferred connection data")
+
 	k8sClient, err := kubernetes.NewClient(time.Duration(timeout) * time.Second)
 	if err != nil {
 		return nil, logging.Errorf("failed to instantiate the Kubernetes client: %+v", err)
@@ -48,10 +38,6 @@ func NewReconcileLooper(ctx context.Context, timeout int) (*ReconcileLooper, err
 }
 
 func NewReconcileLooperWithClient(ctx context.Context, k8sClient *kubernetes.Client, timeout int) (*ReconcileLooper, error) {
-	ipPools, err := k8sClient.ListIPPools(ctx)
-	if err != nil {
-		return nil, logging.Errorf("failed to retrieve all IP pools: %v", err)
-	}
 
 	pods, err := k8sClient.ListPods(ctx)
 	if err != nil {
@@ -69,9 +55,6 @@ func NewReconcileLooperWithClient(ctx context.Context, k8sClient *kubernetes.Cli
 		return nil, err
 	}
 
-	if err := looper.findClusterWideIPReservations(ctx); err != nil {
-		return nil, err
-	}
 	return looper, nil
 }
 
@@ -151,49 +134,6 @@ func (rl ReconcileLooper) ReconcileIPPools(ctx context.Context) ([]net.IP, error
 	}
 
 	return totalCleanedUpIps, nil
-}
-
-func (rl *ReconcileLooper) findClusterWideIPReservations(ctx context.Context) error {
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(rl.requestTimeout)*time.Second)
-	defer cancel()
-
-	clusterWideIPReservations, err := rl.k8sClient.ListOverlappingIPs(ctxWithTimeout)
-	if err != nil {
-		return logging.Errorf("failed to list all OverLappingIPs: %v", err)
-	}
-
-	for _, clusterWideIPReservation := range clusterWideIPReservations {
-		ip := clusterWideIPReservation.GetName()
-		podRef := clusterWideIPReservation.Spec.PodRef
-
-		if !rl.isPodAlive(podRef, ip) {
-			logging.Debugf("pod ref %s is not listed in the live pods list", podRef)
-			rl.orphanedClusterWideIPs = append(rl.orphanedClusterWideIPs, clusterWideIPReservation)
-		}
-	}
-
-	return nil
-}
-
-func (rl ReconcileLooper) ReconcileOverlappingIPAddresses(ctx context.Context) error {
-	var failedReconciledClusterWideIPs []string
-
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(rl.requestTimeout)*time.Second)
-	defer cancel()
-
-	for _, overlappingIPStruct := range rl.orphanedClusterWideIPs {
-		if err := rl.k8sClient.DeleteOverlappingIP(ctxWithTimeout, &overlappingIPStruct); err != nil {
-			logging.Errorf("failed to remove cluster wide IP: %s", overlappingIPStruct.GetName())
-			failedReconciledClusterWideIPs = append(failedReconciledClusterWideIPs, overlappingIPStruct.GetName())
-			continue
-		}
-		logging.Verbosef("removed stale overlappingIP allocation [%s]", overlappingIPStruct.GetName())
-	}
-
-	if len(failedReconciledClusterWideIPs) != 0 {
-		return logging.Errorf("could not reconcile cluster wide IPs: %v", failedReconciledClusterWideIPs)
-	}
-	return nil
 }
 
 func findOutPodRefsToDeallocateIPsFrom(orphanedIP OrphanedIPReservations) []string {

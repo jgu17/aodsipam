@@ -23,8 +23,9 @@ SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 bash ./vendor/k8s.io/code-generator/generate-groups.sh "client,informer,lister" \
   aodsipam/pkg/client \
   aodsipam/pkg/api \
-  whereabouts.cni.cncf.io:v1alpha1 \
+  platform.afo-nc.microsoft.com \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+
 
 cp -r aodsipam/pkg/client/* pkg/client
 

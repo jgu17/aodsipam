@@ -34,21 +34,7 @@ func (a AssignmentError) Error() string {
 }
 
 // AssignIP assigns an IP using a range and a reserve list.
-func AssignIP(ipamConf types.RangeConfiguration, reservelist []types.IPReservation, containerID string, podRef string) (net.IPNet, []types.IPReservation, error) {
-
-	// Setup the basics here.
-	_, ipnet, _ := net.ParseCIDR(ipamConf.Range)
-
-	newip, updatedreservelist, err := IterateForAssignment(*ipnet, ipamConf.RangeStart, ipamConf.RangeEnd, reservelist, ipamConf.OmitRanges, containerID, podRef)
-	if err != nil {
-		return net.IPNet{}, nil, err
-	}
-
-	return net.IPNet{IP: newip, Mask: ipnet.Mask}, updatedreservelist, nil
-}
-
-// AssignIP assigns an IP using a range and a reserve list.
-func AssignIP1(ctx context.Context, config *rest.Config, containerID string, podRef string) (net.IPNet, error) {
+func AssignIP(ctx context.Context, config *rest.Config, containerID string, podRef string) (net.IPNet, error) {
 
 	crScheme := runtime.NewScheme()
 	ipamv1.AddToScheme(crScheme)
@@ -151,20 +137,7 @@ func createObject(cl client.Client, ctx context.Context, obj client.Object, opts
 }
 
 // DeallocateIP assigns an IP using a range and a reserve list.
-func DeallocateIP(reservelist []types.IPReservation, containerID string) ([]types.IPReservation, net.IP, error) {
-
-	updatedreservelist, hadip, err := IterateForDeallocation(reservelist, containerID, getMatchingIPReservationIndex)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	logging.Debugf("Deallocating given previously used IP: %v", hadip)
-
-	return updatedreservelist, hadip, nil
-}
-
-// DeallocateIP assigns an IP using a range and a reserve list.
-func DeallocateIP1(ctx context.Context, config *rest.Config, containerID string) (net.IP, error) {
+func DeallocateIP(ctx context.Context, config *rest.Config, containerID string) (net.IP, error) {
 
 	crScheme := runtime.NewScheme()
 	ipamv1.AddToScheme(crScheme)

@@ -25,10 +25,6 @@ import (
 	nadlister "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/listers/k8s.cni.cncf.io/v1"
 
 	"aodsipam/pkg/allocate"
-	whereaboutsv1alpha1 "aodsipam/pkg/api/whereabouts.cni.cncf.io/v1alpha1"
-	wbclientset "aodsipam/pkg/client/clientset/versioned"
-	wbinformers "aodsipam/pkg/client/informers/externalversions"
-	wblister "aodsipam/pkg/client/listers/whereabouts.cni.cncf.io/v1alpha1"
 	"aodsipam/pkg/config"
 	"aodsipam/pkg/logging"
 	wbclient "aodsipam/pkg/storage/kubernetes"
@@ -39,7 +35,7 @@ const (
 	defaultMountPath      = "/host"
 	ipReconcilerQueueName = "pod-updates"
 	syncPeriod            = time.Second
-	whereaboutsConfigPath = "/etc/cni/net.d/aodsipam.d/aodsipam.conf"
+	aodsipamConfigPath    = "/etc/cni/net.d/aodsipam.d/aodsipam.conf"
 	maxRetries            = 2
 )
 
@@ -52,15 +48,11 @@ type garbageCollector func(ctx context.Context, mode int, ipamConf types.IPAMCon
 
 type PodController struct {
 	k8sClient               kubernetes.Interface
-	wbClient                wbclientset.Interface
 	arePodsSynched          cache.InformerSynced
-	areIPPoolsSynched       cache.InformerSynced
 	areNetAttachDefsSynched cache.InformerSynced
 	podsInformer            cache.SharedIndexInformer
-	ipPoolInformer          cache.SharedIndexInformer
 	netAttachDefInformer    cache.SharedIndexInformer
 	podLister               v1corelisters.PodLister
-	ipPoolLister            wblister.IPPoolLister
 	netAttachDefLister      nadlister.NetworkAttachmentDefinitionLister
 	broadcaster             record.EventBroadcaster
 	recorder                record.EventRecorder
@@ -70,16 +62,14 @@ type PodController struct {
 }
 
 // NewPodController ...
-func NewPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.Interface, k8sCoreInformerFactory v1coreinformerfactory.SharedInformerFactory, wbSharedInformerFactory wbinformers.SharedInformerFactory, netAttachDefInformerFactory nadinformers.SharedInformerFactory, broadcaster record.EventBroadcaster, recorder record.EventRecorder) *PodController {
-	return newPodController(k8sCoreClient, wbClient, k8sCoreInformerFactory, wbSharedInformerFactory, netAttachDefInformerFactory, broadcaster, recorder, wbclient.IPManagement)
+func NewPodController(k8sCoreClient kubernetes.Interface, k8sCoreInformerFactory v1coreinformerfactory.SharedInformerFactory, netAttachDefInformerFactory nadinformers.SharedInformerFactory, broadcaster record.EventBroadcaster, recorder record.EventRecorder) *PodController {
+	return newPodController(k8sCoreClient, k8sCoreInformerFactory, netAttachDefInformerFactory, broadcaster, recorder)
 }
 
-func newPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.Interface, k8sCoreInformerFactory v1coreinformerfactory.SharedInformerFactory, wbSharedInformerFactory wbinformers.SharedInformerFactory, netAttachDefInformerFactory nadinformers.SharedInformerFactory, broadcaster record.EventBroadcaster, recorder record.EventRecorder, cleanupFunc garbageCollector) *PodController {
+func newPodController(k8sCoreClient kubernetes.Interface, k8sCoreInformerFactory v1coreinformerfactory.SharedInformerFactory, netAttachDefInformerFactory nadinformers.SharedInformerFactory, broadcaster record.EventBroadcaster, recorder record.EventRecorder) *PodController {
 	k8sPodFilteredInformer := k8sCoreInformerFactory.Core().V1().Pods()
-	ipPoolInformer := wbSharedInformerFactory.Whereabouts().V1alpha1().IPPools()
 	netAttachDefInformer := netAttachDefInformerFactory.K8sCniCncfIo().V1().NetworkAttachmentDefinitions()
 
-	poolInformer := ipPoolInformer.Informer()
 	networksInformer := netAttachDefInformer.Informer()
 	podsInformer := k8sPodFilteredInformer.Informer()
 
@@ -96,20 +86,15 @@ func newPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.I
 
 	return &PodController{
 		k8sClient:               k8sCoreClient,
-		wbClient:                wbClient,
 		arePodsSynched:          podsInformer.HasSynced,
-		areIPPoolsSynched:       poolInformer.HasSynced,
 		areNetAttachDefsSynched: networksInformer.HasSynced,
 		broadcaster:             broadcaster,
 		recorder:                recorder,
 		podsInformer:            podsInformer,
-		ipPoolInformer:          poolInformer,
 		netAttachDefInformer:    networksInformer,
 		podLister:               k8sPodFilteredInformer.Lister(),
-		ipPoolLister:            ipPoolInformer.Lister(),
 		netAttachDefLister:      netAttachDefInformer.Lister(),
 		workqueue:               queue,
-		cleanupFunc:             cleanupFunc,
 	}
 }
 
@@ -117,7 +102,7 @@ func newPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.I
 func (pc *PodController) Start(stopChan <-chan struct{}) {
 	logging.Verbosef("starting network controller")
 
-	if ok := cache.WaitForCacheSync(stopChan, pc.arePodsSynched, pc.areNetAttachDefsSynched, pc.areIPPoolsSynched); !ok {
+	if ok := cache.WaitForCacheSync(stopChan, pc.arePodsSynched, pc.areNetAttachDefsSynched); !ok {
 		logging.Verbosef("failed waiting for caches to sync")
 	}
 
@@ -168,46 +153,8 @@ func (pc *PodController) garbageCollectPodIPs(pod *v1.Pod) error {
 			return fmt.Errorf("failed to get network-attachment-definition for iface %s: %+v", ifaceStatus.Name, err)
 		}
 
-		mountPath := defaultMountPath
-		if pc.mountPath != "" {
-			mountPath = pc.mountPath
-		}
-
 		logging.Verbosef("the NAD's config: %s", nad.Spec)
-		ipamConfig, err := ipamConfiguration(nad, podNamespace, podName, mountPath)
-		if err != nil && isInvalidPluginType(err) {
-			logging.Debugf("error while computing something: %v", err)
-			continue
-		} else if err != nil {
-			return fmt.Errorf("failed to create an IPAM configuration for the pod %s iface %s: %+v", podID(podNamespace, podName), ifaceStatus.Name, err)
-		}
 
-		var pools []*whereaboutsv1alpha1.IPPool
-
-		for _, pool := range pools {
-			for allocationIndex, allocation := range pool.Spec.Allocations {
-				if allocation.PodRef == podID(podNamespace, podName) {
-					logging.Verbosef("stale allocation to cleanup: %+v", allocation)
-
-					client := *wbclient.NewKubernetesClient(nil, pc.k8sClient, 0)
-					wbClient := &wbclient.KubernetesIPAM{
-						Client: client,
-						Config: *ipamConfig,
-					}
-
-					if err != nil {
-						logging.Debugf("error while generating the IPAM client: %v", err)
-						continue
-					}
-					if _, err := pc.cleanupFunc(context.TODO(), types.Deallocate, *ipamConfig, wbClient); err != nil {
-						logging.Errorf("failed to cleanup allocation: %v", err)
-					}
-					if err := pc.addressGarbageCollected(pod, nad.GetName(), pool.Spec.Range, allocationIndex); err != nil {
-						logging.Errorf("failed to issue event for successful IP address cleanup: %v", err)
-					}
-				}
-			}
-		}
 	}
 
 	return nil
@@ -259,14 +206,6 @@ func (pc *PodController) ifaceNetAttachDef(ifaceStatus nadv1.NetworkStatus) (*na
 		return nil, err
 	}
 	return nad, nil
-}
-
-func (pc *PodController) ipPool(cidr string) (*whereaboutsv1alpha1.IPPool, error) {
-	pool, err := pc.ipPoolLister.IPPools(ipPoolsNamespace()).Get(wbclient.NormalizeRange(cidr))
-	if err != nil {
-		return nil, err
-	}
-	return pool, nil
 }
 
 func (pc *PodController) addressGarbageCollected(pod *v1.Pod, networkName string, ipRange string, allocationIndex string) error {
@@ -335,9 +274,9 @@ func podNetworkStatus(pod *v1.Pod) ([]nadv1.NetworkStatus, error) {
 }
 
 func ipamConfiguration(nad *nadv1.NetworkAttachmentDefinition, podNamespace string, podName string, mountPath string) (*types.IPAMConfig, error) {
-	mounterWhereaboutsConfigFilePath := mountPath + whereaboutsConfigPath
+	mounterAodsIpamConfigFilePath := mountPath + aodsipamConfigPath
 
-	ipamConfig, err := config.LoadIPAMConfiguration([]byte(nad.Spec.Config), "", mounterWhereaboutsConfigFilePath)
+	ipamConfig, err := config.LoadIPAMConfiguration([]byte(nad.Spec.Config), "", mounterAodsIpamConfigFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +288,7 @@ func ipamConfiguration(nad *nadv1.NetworkAttachmentDefinition, podNamespace stri
 }
 
 func ipPoolsNamespace() string {
-	const wbNamespaceEnvVariableName = "WHEREABOUTS_NAMESPACE"
+	const wbNamespaceEnvVariableName = "AODSIPAM_NAMESPACE"
 	if wbNamespace, found := os.LookupEnv(wbNamespaceEnvVariableName); found {
 		return wbNamespace
 	}
