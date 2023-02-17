@@ -4,31 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
-	"strings"
 
 	cnitypes "github.com/containernetworking/cni/pkg/types"
-	types020 "github.com/containernetworking/cni/pkg/types/020"
 	"github.com/imdario/mergo"
-
-	netutils "k8s.io/utils/net"
 
 	"aodsipam/pkg/logging"
 	"aodsipam/pkg/types"
 )
-
-// canonicalizeIP makes sure a provided ip is in standard form
-func canonicalizeIP(ip *net.IP) error {
-	if ip.To4() != nil {
-		*ip = ip.To4()
-		return nil
-	} else if ip.To16() != nil {
-		*ip = ip.To16()
-		return nil
-	}
-	return fmt.Errorf("IP %s not v4 nor v6", *ip)
-}
 
 // LoadIPAMConfig creates IPAMConfig using json encoded configuration provided
 // as `bytes`. At the moment values provided in envArgs are ignored so there
@@ -59,11 +42,10 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 	}
 	// Now let's try to merge the configurations...
 	// NB: Don't try to do any initialization before this point or it won't account for merged flat file.
-	var OverlappingRanges bool = n.IPAM.OverlappingRanges
 	if err := mergo.Merge(&n, flatipam); err != nil {
 		logging.Errorf("Merge error with flat file: %s", err)
 	}
-	n.IPAM.OverlappingRanges = OverlappingRanges
+
 	// Logging
 	if n.IPAM.LogFile != "" {
 		logging.SetLogFile(n.IPAM.LogFile)
@@ -81,18 +63,6 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 		return nil, "", storageError()
 	}
 
-	if n.IPAM.GatewayStr != "" {
-		gwip := netutils.ParseIPSloppy(n.IPAM.GatewayStr)
-		if gwip == nil {
-			return nil, "", fmt.Errorf("couldn't parse gateway IP: %s", n.IPAM.GatewayStr)
-		}
-		n.IPAM.Gateway = gwip
-	}
-
-	if err := configureStatic(&n, args); err != nil {
-		return nil, "", err
-	}
-
 	// Copy net name into IPAM so not to drag Net struct around
 	n.IPAM.Name = n.Name
 
@@ -108,53 +78,6 @@ func pathExists(path string) bool {
 		return false
 	}
 	return true
-}
-
-func configureStatic(n *types.Net, args types.IPAMEnvArgs) error {
-
-	// Validate all ranges
-	numV4 := 0
-	numV6 := 0
-
-	for i := range n.IPAM.Addresses {
-		ip, addr, err := netutils.ParseCIDRSloppy(n.IPAM.Addresses[i].AddressStr)
-		if err != nil {
-			return fmt.Errorf("invalid CIDR in addresses %s: %s", n.IPAM.Addresses[i].AddressStr, err)
-		}
-		n.IPAM.Addresses[i].Address = *addr
-		n.IPAM.Addresses[i].Address.IP = ip
-
-		if err := canonicalizeIP(&n.IPAM.Addresses[i].Address.IP); err != nil {
-			return fmt.Errorf("invalid address %d: %s", i, err)
-		}
-
-		if n.IPAM.Addresses[i].Address.IP.To4() != nil {
-			n.IPAM.Addresses[i].Version = "4"
-			numV4++
-		} else {
-			n.IPAM.Addresses[i].Version = "6"
-			numV6++
-		}
-	}
-
-	newnumV6, newnumV4, err := handleEnvArgs(n, numV6, numV4, args)
-	if err != nil {
-		return err
-	}
-	numV4 = newnumV4
-	numV6 = newnumV6
-
-	// CNI spec 0.2.0 and below supported only one v4 and v6 address
-	if numV4 > 1 || numV6 > 1 {
-		for _, v := range types020.SupportedVersions {
-			if n.CNIVersion == v {
-				return fmt.Errorf("CNI version %v does not support more than 1 address per family", n.CNIVersion)
-			}
-		}
-	}
-
-	return nil
-
 }
 
 func GetFlatIPAM(isControlLoop bool, IPAM *types.IPAMConfig, extraConfigPaths ...string) (types.Net, string, error) {
@@ -196,48 +119,6 @@ func GetFlatIPAM(isControlLoop bool, IPAM *types.IPAMConfig, extraConfigPaths ..
 	}
 	var err error
 	return flatipam, foundflatfile, err
-}
-
-func handleEnvArgs(n *types.Net, numV6 int, numV4 int, args types.IPAMEnvArgs) (int, int, error) {
-
-	if args.IP != "" {
-		for _, item := range strings.Split(string(args.IP), ",") {
-			ipstr := strings.TrimSpace(item)
-
-			ip, subnet, err := netutils.ParseCIDRSloppy(ipstr)
-			if err != nil {
-				return numV6, numV4, fmt.Errorf("invalid CIDR %s: %s", ipstr, err)
-			}
-
-			addr := types.Address{Address: net.IPNet{IP: ip, Mask: subnet.Mask}}
-			if addr.Address.IP.To4() != nil {
-				addr.Version = "4"
-				numV4++
-			} else {
-				addr.Version = "6"
-				numV6++
-			}
-			n.IPAM.Addresses = append(n.IPAM.Addresses, addr)
-		}
-	}
-
-	if args.GATEWAY != "" {
-		for _, item := range strings.Split(string(args.GATEWAY), ",") {
-			gwip := netutils.ParseIPSloppy(strings.TrimSpace(item))
-			if gwip == nil {
-				return numV6, numV4, fmt.Errorf("invalid gateway address: %s", item)
-			}
-
-			for i := range n.IPAM.Addresses {
-				if n.IPAM.Addresses[i].Address.Contains(gwip) {
-					n.IPAM.Addresses[i].Gateway = gwip
-				}
-			}
-		}
-	}
-
-	return numV6, numV4, nil
-
 }
 
 func LoadIPAMConfiguration(bytes []byte, envArgs string, extraConfigPaths ...string) (*types.IPAMConfig, error) {

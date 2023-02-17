@@ -28,7 +28,7 @@ kind-load:
 	kind load docker-image ${IMG} --name $(KIND_CLUSTER)
 
 deletepod:
-	kubectl delete po testpod1 --force
+	kubectl delete po testpod1 --force || true
 
 install:
 	kubectl create -f doc/crds || true

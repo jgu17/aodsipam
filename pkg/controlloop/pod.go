@@ -183,17 +183,6 @@ func (pc *PodController) garbageCollectPodIPs(pod *v1.Pod) error {
 		}
 
 		var pools []*whereaboutsv1alpha1.IPPool
-		for _, rangeConfig := range ipamConfig.IPRanges {
-			pool, err := pc.ipPool(rangeConfig.Range)
-
-			if err != nil {
-				return fmt.Errorf("failed to get the IPPool data: %+v", err)
-			}
-
-			logging.Verbosef("pool range [%s]", pool.Spec.Range)
-
-			pools = append(pools, pool)
-		}
 
 		for _, pool := range pools {
 			for allocationIndex, allocation := range pool.Spec.Allocations {

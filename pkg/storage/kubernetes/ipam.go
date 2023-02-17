@@ -7,7 +7,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -317,151 +316,6 @@ func IPManagement(ctx context.Context, mode int, ipamConf aodsipamtypes.IPAMConf
 	return newips, err
 }
 
-// IPManagement manages ip allocation and deallocation from a storage perspective
-func IPManagement1(ctx context.Context, mode int, ipamConf aodsipamtypes.IPAMConfig, client *KubernetesIPAM) ([]net.IPNet, error) {
-	var newips []net.IPNet
-
-	if ipamConf.PodName == "" {
-		return newips, fmt.Errorf("IPAM client initialization error: no pod name")
-	}
-
-	logging.Debugf("Elected as leader, do processing")
-	newips, err := IPManagementKubernetesUpdate1(ctx, mode, client, ipamConf, client.containerID, ipamConf.GetPodRef())
-
-	logging.Debugf("IPManagement: %v, %v", newips, err)
-	return newips, err
-}
-
-// IPManagementKubernetesUpdate manages k8s updates
-func IPManagementKubernetesUpdate(ctx context.Context, mode int, ipam *KubernetesIPAM, ipamConf aodsipamtypes.IPAMConfig,
-	containerID string, podRef string) ([]net.IPNet, error) {
-	logging.Debugf("IPManagement -- mode: %v / containerID: %v / podRef: %v", mode, containerID, podRef)
-
-	var newips []net.IPNet
-	var newip net.IPNet
-	// Skip invalid modes
-	switch mode {
-	case aodsipamtypes.Allocate, aodsipamtypes.Deallocate:
-	default:
-		return newips, fmt.Errorf("got an unknown mode passed to IPManagement: %v", mode)
-	}
-
-	var overlappingrangestore storage.OverlappingRangeStore
-	var pool storage.IPPool
-	var err error
-
-	requestCtx, requestCancel := context.WithTimeout(ctx, storage.RequestTimeout)
-	defer requestCancel()
-
-	// Check our connectivity first
-	if err := ipam.Status(requestCtx); err != nil {
-		logging.Errorf("IPAM connectivity error: %v", err)
-		return newips, err
-	}
-
-	// handle the ip add/del until successful
-	var overlappingrangeallocations []aodsipamtypes.IPReservation
-	var ipforoverlappingrangeupdate net.IP
-	for _, ipRange := range ipamConf.IPRanges {
-	RETRYLOOP:
-		for j := 0; j < storage.DatastoreRetries; j++ {
-			select {
-			case <-ctx.Done():
-				break RETRYLOOP
-			default:
-				// retry the IPAM loop if the context has not been cancelled
-			}
-
-			overlappingrangestore, err = ipam.GetOverlappingRangeStore()
-			if err != nil {
-				logging.Errorf("IPAM error getting OverlappingRangeStore: %v", err)
-				return newips, err
-			}
-
-			pool, err = ipam.GetIPPool(requestCtx, ipRange.Range)
-			if err != nil {
-				logging.Errorf("IPAM error reading pool allocations (attempt: %d): %v", j, err)
-				if e, ok := err.(storage.Temporary); ok && e.Temporary() {
-					continue
-				}
-				return newips, err
-			}
-
-			reservelist := pool.Allocations()
-			reservelist = append(reservelist, overlappingrangeallocations...)
-			var updatedreservelist []aodsipamtypes.IPReservation
-			switch mode {
-			case aodsipamtypes.Allocate:
-				newip, updatedreservelist, err = allocate.AssignIP(ipRange, reservelist, containerID, podRef)
-				if err != nil {
-					logging.Errorf("Error assigning IP: %v", err)
-					return newips, err
-				}
-				// Now check if this is allocated overlappingrange wide
-				// When it's allocated overlappingrange wide, we add it to a local reserved list
-				// And we try again.
-				if ipamConf.OverlappingRanges {
-					isallocated, err := overlappingrangestore.IsAllocatedInOverlappingRange(requestCtx, newip.IP)
-					if err != nil {
-						logging.Errorf("Error checking overlappingrange allocation: %v", err)
-						return newips, err
-					}
-
-					if isallocated {
-						logging.Debugf("Continuing loop, IP is already allocated (possibly from another range): %v", newip)
-						// We create "dummy" records here for evaluation, but, we need to filter those out later.
-						overlappingrangeallocations = append(overlappingrangeallocations, aodsipamtypes.IPReservation{IP: newip.IP, IsAllocated: true})
-						continue
-					}
-
-					ipforoverlappingrangeupdate = newip.IP
-				}
-
-			case aodsipamtypes.Deallocate:
-				updatedreservelist, ipforoverlappingrangeupdate, err = allocate.DeallocateIP(reservelist, containerID)
-				if err != nil {
-					logging.Errorf("Error deallocating IP: %v", err)
-					return newips, err
-				}
-			}
-
-			// Clean out any dummy records from the reservelist...
-			var usereservelist []aodsipamtypes.IPReservation
-			for _, rl := range updatedreservelist {
-				if !rl.IsAllocated {
-					usereservelist = append(usereservelist, rl)
-				}
-			}
-
-			// Manual race condition testing
-			if ipamConf.SleepForRace > 0 {
-				time.Sleep(time.Duration(ipamConf.SleepForRace) * time.Second)
-			}
-
-			err = pool.Update(requestCtx, usereservelist)
-			if err != nil {
-				logging.Errorf("IPAM error updating pool (attempt: %d): %v", j, err)
-				if e, ok := err.(storage.Temporary); ok && e.Temporary() {
-					continue
-				}
-				break RETRYLOOP
-			}
-			break RETRYLOOP
-		}
-
-		if ipamConf.OverlappingRanges {
-			err = overlappingrangestore.UpdateOverlappingRangeAllocation(requestCtx, mode, ipforoverlappingrangeupdate, containerID, podRef)
-			if err != nil {
-				logging.Errorf("Error performing UpdateOverlappingRangeAllocation: %v", err)
-				return newips, err
-			}
-		}
-
-		newips = append(newips, newip)
-	}
-	return newips, err
-}
-
 func wbNamespaceFromCtx(ctx *clientcmdapi.Context) string {
 	namespace := ctx.Namespace
 	if namespace == "" {
@@ -471,7 +325,7 @@ func wbNamespaceFromCtx(ctx *clientcmdapi.Context) string {
 }
 
 // IPManagementKubernetesUpdate manages k8s updates
-func IPManagementKubernetesUpdate1(ctx context.Context, mode int, ipam *KubernetesIPAM, ipamConf aodsipamtypes.IPAMConfig,
+func IPManagementKubernetesUpdate(ctx context.Context, mode int, ipam *KubernetesIPAM, ipamConf aodsipamtypes.IPAMConfig,
 	containerID string, podRef string) ([]net.IPNet, error) {
 	logging.Debugf("IPManagement -- mode: %v / containerID: %v / podRef: %v", mode, containerID, podRef)
 

@@ -68,13 +68,11 @@ func cmdCheck(args *skel.CmdArgs) error {
 func cmdAdd(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM, cniVersion string) error {
 	// Initialize our result, and assign DNS & routing.
 	result := &current.Result{}
-	result.DNS = client.Config.DNS
-	result.Routes = client.Config.Routes
 
 	logging.Debugf("Beginning IPAM for ContainerID: %v", args.ContainerID)
 	var newips []net.IPNet
 
-	newips, err := kubernetes.IPManagement1(context.Background(), types.Allocate, client.Config, client)
+	newips, err := kubernetes.IPManagement(context.Background(), types.Allocate, client.Config, client)
 	if err != nil {
 		logging.Errorf("Error at storage engine: %s", err)
 		return fmt.Errorf("error at storage engine: %w", err)
@@ -117,14 +115,6 @@ func cmdAdd(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM, cniVersion st
 			Gateway: client.Config.Gateway})
 	}
 
-	// Assign all the static IP elements.
-	for _, v := range client.Config.Addresses {
-		result.IPs = append(result.IPs, &current.IPConfig{
-			Version: v.Version,
-			Address: v.Address,
-			Gateway: v.Gateway})
-	}
-
 	logging.Debugf("result----------------------: %v\n", result)
 	return cnitypes.PrintResult(result, cniVersion)
 }
@@ -135,7 +125,7 @@ func cmdDel(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM) error {
 	ctx, cancel := context.WithTimeout(context.Background(), types.DelTimeLimit)
 	defer cancel()
 
-	_, err := kubernetes.IPManagement1(ctx, types.Deallocate, client.Config, client)
+	_, err := kubernetes.IPManagement(ctx, types.Deallocate, client.Config, client)
 	if err != nil {
 		logging.Verbosef("WARNING: Problem deallocating IP: %s", err)
 	}

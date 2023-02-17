@@ -47,17 +47,11 @@ type RangeConfiguration struct {
 // IPAMConfig describes the expected json configuration for this plugin
 type IPAMConfig struct {
 	Name                     string
-	Type                     string               `json:"type"`
-	Routes                   []*cnitypes.Route    `json:"routes"`
-	Addresses                []Address            `json:"addresses,omitempty"`
-	IPRanges                 []RangeConfiguration `json:"ipRanges"`
-	DNS                      cnitypes.DNS         `json:"dns"`
-	GatewayStr               string               `json:"gateway"`
-	LogFile                  string               `json:"log_file"`
-	LogLevel                 string               `json:"log_level"`
-	OverlappingRanges        bool                 `json:"enable_overlapping_ranges,omitempty"`
-	ReconcilerCronExpression string               `json:"reconciler_cron_expression,omitempty"`
-	SleepForRace             int                  `json:"sleep_for_race,omitempty"`
+	Type                     string `json:"type"`
+	LogFile                  string `json:"log_file"`
+	LogLevel                 string `json:"log_level"`
+	ReconcilerCronExpression string `json:"reconciler_cron_expression,omitempty"`
+	SleepForRace             int    `json:"sleep_for_race,omitempty"`
 	Gateway                  net.IP
 	Kubernetes               KubernetesConfig `json:"kubernetes,omitempty"`
 	ConfigurationPath        string           `json:"configuration_path"`
@@ -68,31 +62,11 @@ type IPAMConfig struct {
 func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 	type IPAMConfigAlias struct {
 		Name                     string
-		Type                     string               `json:"type"`
-		Routes                   []*cnitypes.Route    `json:"routes"`
-		Datastore                string               `json:"datastore"`
-		Addresses                []Address            `json:"addresses,omitempty"`
-		IPRanges                 []RangeConfiguration `json:"ipRanges"`
-		OmitRanges               []string             `json:"exclude,omitempty"`
-		DNS                      cnitypes.DNS         `json:"dns"`
-		Range                    string               `json:"range"`
-		RangeStart               string               `json:"range_start,omitempty"`
-		RangeEnd                 string               `json:"range_end,omitempty"`
-		GatewayStr               string               `json:"gateway"`
-		EtcdHost                 string               `json:"etcd_host,omitempty"`
-		EtcdUsername             string               `json:"etcd_username,omitempty"`
-		EtcdPassword             string               `json:"etcd_password,omitempty"`
-		EtcdKeyFile              string               `json:"etcd_key_file,omitempty"`
-		EtcdCertFile             string               `json:"etcd_cert_file,omitempty"`
-		EtcdCACertFile           string               `json:"etcd_ca_cert_file,omitempty"`
-		LeaderLeaseDuration      int                  `json:"leader_lease_duration,omitempty"`
-		LeaderRenewDeadline      int                  `json:"leader_renew_deadline,omitempty"`
-		LeaderRetryPeriod        int                  `json:"leader_retry_period,omitempty"`
-		LogFile                  string               `json:"log_file"`
-		LogLevel                 string               `json:"log_level"`
-		ReconcilerCronExpression string               `json:"reconciler_cron_expression,omitempty"`
-		OverlappingRanges        bool                 `json:"enable_overlapping_ranges,omitempty"`
-		SleepForRace             int                  `json:"sleep_for_race,omitempty"`
+		Type                     string `json:"type"`
+		LogFile                  string `json:"log_file"`
+		LogLevel                 string `json:"log_level"`
+		ReconcilerCronExpression string `json:"reconciler_cron_expression,omitempty"`
+		SleepForRace             int    `json:"sleep_for_race,omitempty"`
 		Gateway                  string
 		Kubernetes               KubernetesConfig `json:"kubernetes,omitempty"`
 		ConfigurationPath        string           `json:"configuration_path"`
@@ -101,8 +75,7 @@ func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	ipamConfigAlias := IPAMConfigAlias{
-		OverlappingRanges: DefaultOverlappingIPsFeatures,
-		SleepForRace:      DefaultSleepForRace,
+		SleepForRace: DefaultSleepForRace,
 	}
 	if err := json.Unmarshal(data, &ipamConfigAlias); err != nil {
 		return err
@@ -111,11 +84,6 @@ func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 	*ic = IPAMConfig{
 		Name:                     ipamConfigAlias.Name,
 		Type:                     ipamConfigAlias.Type,
-		Routes:                   ipamConfigAlias.Routes,
-		Addresses:                ipamConfigAlias.Addresses,
-		IPRanges:                 ipamConfigAlias.IPRanges,
-		DNS:                      ipamConfigAlias.DNS,
-		GatewayStr:               ipamConfigAlias.GatewayStr,
 		LogFile:                  ipamConfigAlias.LogFile,
 		LogLevel:                 ipamConfigAlias.LogLevel,
 		ReconcilerCronExpression: ipamConfigAlias.ReconcilerCronExpression,

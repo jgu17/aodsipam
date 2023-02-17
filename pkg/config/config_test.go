@@ -39,9 +39,6 @@ var _ = Describe("Allocation operations", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipamconfig.LogLevel).To(Equal("debug"))
 		Expect(ipamconfig.LogFile).To(Equal("/tmp/aodsipam.log"))
-		Expect(ipamconfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamconfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.5")))
-		Expect(ipamconfig.IPRanges[0].RangeEnd).To(Equal(net.ParseIP("192.168.1.25")))
 		Expect(ipamconfig.Gateway).To(Equal(net.ParseIP("192.168.10.1")))
 
 	})
@@ -82,8 +79,6 @@ var _ = Describe("Allocation operations", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipamconfig.LogLevel).To(Equal("debug"))
 		Expect(ipamconfig.LogFile).To(Equal("/tmp/aodsipam.log"))
-		Expect(ipamconfig.IPRanges[0].Range).To(Equal("192.168.2.0/24"))
-		Expect(ipamconfig.IPRanges[0].RangeStart.String()).To(Equal("192.168.2.223"))
 		// Gateway should remain unchanged from conf due to preference for primary config
 		Expect(ipamconfig.Gateway).To(Equal(net.ParseIP("192.168.10.1")))
 		Expect(ipamconfig.Kubernetes.KubeConfigPath).To(Equal("/etc/cni/net.d/aodsipam.d/aodsipam.kubeconfig"))
@@ -103,10 +98,9 @@ var _ = Describe("Allocation operations", func() {
 		}`
 		Expect(ioutil.WriteFile("/tmp/aodsipam.conf", []byte(globalConf), 0755)).To(Succeed())
 
-		ipamconfig, _, err := LoadIPAMConfig([]byte(generateIPAMConfWithOverlappingRanges()), "")
+		_, _, err := LoadIPAMConfig([]byte(generateIPAMConfWithOverlappingRanges()), "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ipamconfig.OverlappingRanges).To(BeTrue())
 	})
 
 	It("overlapping range can be disabled", func() {
@@ -122,10 +116,9 @@ var _ = Describe("Allocation operations", func() {
 		}`
 		Expect(ioutil.WriteFile("/tmp/aodsipam.conf", []byte(globalConf), 0755)).To(Succeed())
 
-		ipamconfig, _, err := LoadIPAMConfig([]byte(generateIPAMConfWithoutOverlappingRanges()), "")
+		_, _, err := LoadIPAMConfig([]byte(generateIPAMConfWithoutOverlappingRanges()), "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ipamconfig.OverlappingRanges).To(BeFalse())
 	})
 
 	It("can load a config list", func() {
@@ -158,9 +151,6 @@ var _ = Describe("Allocation operations", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipamconfig.LogLevel).To(Equal("debug"))
 		Expect(ipamconfig.LogFile).To(Equal("/tmp/aodsipam.log"))
-		Expect(ipamconfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamconfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.5")))
-		Expect(ipamconfig.IPRanges[0].RangeEnd).To(Equal(net.ParseIP("192.168.1.25")))
 		Expect(ipamconfig.Gateway).To(Equal(net.ParseIP("192.168.10.1")))
 	})
 
@@ -198,11 +188,8 @@ var _ = Describe("Allocation operations", func() {
         }
       }`
 
-		ipamConfig, _, err := LoadIPAMConfig([]byte(conf), "")
+		_, _, err := LoadIPAMConfig([]byte(conf), "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ipamConfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamConfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.5")))
-		Expect(ipamConfig.IPRanges[0].RangeEnd).To(Equal(net.ParseIP("192.168.1.25")))
 	})
 
 	It("allows for leading zeroes in the range", func() {
@@ -223,10 +210,8 @@ var _ = Describe("Allocation operations", func() {
         }
       }`
 
-		ipamConfig, _, err := LoadIPAMConfig([]byte(conf), "")
+		_, _, err := LoadIPAMConfig([]byte(conf), "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ipamConfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamConfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.0")))
 	})
 
 	It("allows for leading zeroes in the range when the start range is provided", func() {
@@ -248,10 +233,8 @@ var _ = Describe("Allocation operations", func() {
         }
       }`
 
-		ipamConfig, _, err := LoadIPAMConfig([]byte(conf), "")
+		_, _, err := LoadIPAMConfig([]byte(conf), "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ipamConfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamConfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.44")))
 	})
 
 	It("allows for leading zeroes in the range when the start and end ranges are provided", func() {
@@ -274,11 +257,9 @@ var _ = Describe("Allocation operations", func() {
         }
       }`
 
-		ipamConfig, _, err := LoadIPAMConfig([]byte(conf), "")
+		_, _, err := LoadIPAMConfig([]byte(conf), "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ipamConfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamConfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.44")))
-		Expect(ipamConfig.IPRanges[0].RangeEnd).To(Equal(net.ParseIP("192.168.1.209")))
+
 	})
 
 	It("can unmarshall the cronjob expression", func() {
@@ -304,9 +285,6 @@ var _ = Describe("Allocation operations", func() {
 
 		ipamConfig, _, err := LoadIPAMConfig([]byte(conf), "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ipamConfig.IPRanges[0].Range).To(Equal("192.168.1.0/24"))
-		Expect(ipamConfig.IPRanges[0].RangeStart).To(Equal(net.ParseIP("192.168.1.44")))
-		Expect(ipamConfig.IPRanges[0].RangeEnd).To(Equal(net.ParseIP("192.168.1.209")))
 		Expect(ipamConfig.ReconcilerCronExpression).To(Equal("30 4 * * *"))
 	})
 
