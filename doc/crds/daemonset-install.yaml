@@ -162,7 +162,7 @@ spec:
         app: aodsipam
         name: aodsipam
     spec:
-      hostNetwork: true      
+      hostNetwork: true
       serviceAccountName: aodsipam
       nodeSelector:
         kubernetes.io/arch: amd64

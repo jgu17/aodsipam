@@ -22,6 +22,7 @@ type Client struct {
 	clientSet kubernetes.Interface
 	retries   int
 	timeout   time.Duration
+	config    *rest.Config
 }
 
 func NewClient(timeout time.Duration) (*Client, error) {
@@ -43,6 +44,18 @@ func NewClientViaKubeconfig(kubeconfigPath string, timeout time.Duration) (*Clie
 	}
 
 	return newClient(config, timeout)
+}
+
+func NewRestConfigViaKubeconfig(kubeconfigPath string) (*rest.Config, error) {
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{}).ClientConfig()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }
 
 func newClient(config *rest.Config, timeout time.Duration) (*Client, error) {

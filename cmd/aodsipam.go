@@ -74,10 +74,7 @@ func cmdAdd(args *skel.CmdArgs, client *kubernetes.KubernetesIPAM, cniVersion st
 	logging.Debugf("Beginning IPAM for ContainerID: %v", args.ContainerID)
 	var newips []net.IPNet
 
-	ctx, cancel := context.WithTimeout(context.Background(), types.AddTimeLimit)
-	defer cancel()
-
-	newips, err := kubernetes.IPManagement1(ctx, types.Allocate, client.Config, client)
+	newips, err := kubernetes.IPManagement1(context.Background(), types.Allocate, client.Config, client)
 	if err != nil {
 		logging.Errorf("Error at storage engine: %s", err)
 		return fmt.Errorf("error at storage engine: %w", err)

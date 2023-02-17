@@ -2,7 +2,6 @@ package allocate
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"math"
 	"net"
@@ -49,26 +48,24 @@ func AssignIP(ipamConf types.RangeConfiguration, reservelist []types.IPReservati
 }
 
 // AssignIP assigns an IP using a range and a reserve list.
-func AssignIP1(containerID string, podRef string) (net.IPNet, error) {
+func AssignIP1(ctx context.Context, config *rest.Config, containerID string, podRef string) (net.IPNet, error) {
 
 	crScheme := runtime.NewScheme()
 	ipamv1.AddToScheme(crScheme)
-	config, err := rest.InClusterConfig()
-	if err != nil {
 
-		return net.IPNet{}, err
-	}
 	cl, err := client.New(config, client.Options{
 		Scheme: crScheme,
 	})
 
 	if err != nil {
+		logging.Errorf("could not get Client", err)
 		return net.IPNet{}, err
 	}
 
 	foundIPPool := &ipamv1.IPPool{}
-	err = cl.Get(context.Background(), apitypes.NamespacedName{Name: "l3network11-ipv4"}, foundIPPool)
+	err = cl.Get(ctx, apitypes.NamespacedName{Name: "l3network11-ipv4", Namespace: "default"}, foundIPPool)
 	if err != nil {
+		logging.Errorf("could not get foundIPPool", err)
 		if apierrors.IsNotFound(err) {
 			logging.Debugf("ip pool does not exist")
 			return net.IPNet{}, err
@@ -77,39 +74,49 @@ func AssignIP1(containerID string, podRef string) (net.IPNet, error) {
 		return net.IPNet{}, err
 	}
 
+	logging.Debugf("getting IP pool ---------- ippool: %v ", *foundIPPool)
+
+	logging.Debugf("getting IP pool Subnet---------- ippool.subnet: %v ", string(*foundIPPool.Spec.Pools[0].Subnet))
+	_, ipnet, _ := net.ParseCIDR(string(*foundIPPool.Spec.Pools[0].Subnet))
+
+	logging.Debugf("getting IP pool MASK---------- ippool.MASK: %v ", ipnet.Mask)
+
 	ipClaim := &ipamv1.IPClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "l3network-504-32eb7f2f-ipv4",
+			Name:      "l3network-504-32eb7f2f-ipv4",
+			Namespace: "default",
 		},
 		Spec: ipamv1.IPClaimSpec{
 			Pool: corev1.ObjectReference{
-				Name: "l3network11-ipv4",
+				Name:      "l3network11-ipv4",
+				Namespace: "default",
 			},
 		},
 	}
 
 	// IPClaim Status not getting updated when claim is in different namespace than pool
 	logging.Debugf("Creating IP Claim -- ipClaim: %v ", ipClaim)
-	err = cl.Create(context.Background(), ipClaim)
+
+	err = createObject(cl, ctx, ipClaim)
 	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			logging.Debugf("createIPv4Claim: ipclaim already exist: l3network-504-32eb7f2f-ipv4")
-		} else {
-			return net.IPNet{}, err
-		}
+		logging.Errorf("Error in creating ipclaim", err)
+		return net.IPNet{}, err
 	}
+
+	logging.Debugf("IP Claim created and waiting for 30 second-- ipClaim: %v ", ipClaim)
 
 	// Setup the basics here.
-	_, ipnet, _ := net.ParseCIDR(string(*foundIPPool.Spec.Pools[0].Subnet))
 
-	var timeout = flag.Int("timeout", 30, "timeout in seconds")
+	//var timeout = flag.Int("timeout", 30, "timeout in seconds")
 
-	err = waitForPodRunning(cl, "default", "l3network-504-32eb7f2f-ipv4", time.Duration(*timeout)*time.Second)
-	if err != nil {
-		return net.IPNet{}, fmt.Errorf("The ipclaim never returned ip address")
-	}
+	// err = waitForIPClaim(ctx, cl, "default", "l3network-504-32eb7f2f-ipv4", time.Duration(*timeout)*time.Second)
+	// if err != nil {
+	// 	return net.IPNet{}, fmt.Errorf("The ipclaim never returned ip address")
+	// }
 
-	err = cl.Get(context.Background(), apitypes.NamespacedName{Name: "l3network-504-32eb7f2f-ipv4", Namespace: "default"}, ipClaim)
+	time.Sleep(10 * time.Second)
+
+	err = cl.Get(ctx, apitypes.NamespacedName{Name: "l3network-504-32eb7f2f-ipv4", Namespace: "default"}, ipClaim)
 	if err != nil {
 		return net.IPNet{}, fmt.Errorf("Error in retriving the ipclaim")
 	}
@@ -120,7 +127,7 @@ func AssignIP1(containerID string, podRef string) (net.IPNet, error) {
 
 	logging.Debugf("performIPv4Allocation: foundIPClaim.Status.Address.Name: " + ipClaim.Status.Address.Name)
 	rnClaimIPAddress := &ipamv1.IPAddress{}
-	err = cl.Get(context.Background(), apitypes.NamespacedName{Namespace: ipClaim.Status.Address.Namespace, Name: ipClaim.Status.Address.Name}, rnClaimIPAddress)
+	err = cl.Get(ctx, apitypes.NamespacedName{Namespace: ipClaim.Status.Address.Namespace, Name: ipClaim.Status.Address.Name}, rnClaimIPAddress)
 	if err != nil {
 		return net.IPNet{}, fmt.Errorf("Error in retriving the ipaddress")
 	}
@@ -131,6 +138,16 @@ func AssignIP1(containerID string, podRef string) (net.IPNet, error) {
 	newip := net.ParseIP(string(rnClaimIPAddress.Spec.Address))
 
 	return net.IPNet{IP: newip, Mask: ipnet.Mask}, nil
+}
+
+func createObject(cl client.Client, ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	err := cl.Create(ctx, obj.DeepCopyObject().(client.Object), opts...)
+	logging.Errorf("could not createObject", err)
+	if apierrors.IsAlreadyExists(err) {
+		logging.Debugf("createIPv4Claim: ipclaim already exist: l3network-504-32eb7f2f-ipv4")
+		return nil
+	}
+	return err
 }
 
 // DeallocateIP assigns an IP using a range and a reserve list.
@@ -147,15 +164,11 @@ func DeallocateIP(reservelist []types.IPReservation, containerID string) ([]type
 }
 
 // DeallocateIP assigns an IP using a range and a reserve list.
-func DeallocateIP1(containerID string) (net.IP, error) {
+func DeallocateIP1(ctx context.Context, config *rest.Config, containerID string) (net.IP, error) {
 
 	crScheme := runtime.NewScheme()
 	ipamv1.AddToScheme(crScheme)
-	config, err := rest.InClusterConfig()
-	if err != nil {
 
-		return nil, err
-	}
 	cl, err := client.New(config, client.Options{
 		Scheme: crScheme,
 	})
@@ -165,7 +178,7 @@ func DeallocateIP1(containerID string) (net.IP, error) {
 	}
 
 	ipClaim := &ipamv1.IPClaim{}
-	err = cl.Get(context.Background(), apitypes.NamespacedName{Name: "l3network-504-32eb7f2f-ipv4", Namespace: "default"}, ipClaim)
+	err = cl.Get(ctx, apitypes.NamespacedName{Name: "l3network-504-32eb7f2f-ipv4", Namespace: "default"}, ipClaim)
 	if err != nil {
 		return nil, fmt.Errorf("Error in retriving the ipclaim")
 	}
@@ -175,7 +188,7 @@ func DeallocateIP1(containerID string) (net.IP, error) {
 	}
 
 	logging.Debugf("Deleting the ipclaim: " + ipClaim.Status.Address.Name)
-	err = cl.Delete(context.Background(), ipClaim)
+	err = cl.Delete(ctx, ipClaim)
 	if err != nil {
 		return nil, fmt.Errorf("Error in deleting the ipclaim")
 	}
@@ -187,12 +200,12 @@ func DeallocateIP1(containerID string) (net.IP, error) {
 
 // return a condition function that indicates whether the given pod is
 // currently running
-func getIPAddress(cl client.Client, ipclaimName, namespace string) wait.ConditionFunc {
+func getIPAddress(ctx context.Context, cl client.Client, ipclaimName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
 		fmt.Printf(".") // progress bar!
 
 		ipClaim := &ipamv1.IPClaim{}
-		err := cl.Get(context.Background(), apitypes.NamespacedName{Name: ipclaimName}, ipClaim)
+		err := cl.Get(ctx, apitypes.NamespacedName{Name: ipclaimName, Namespace: "default"}, ipClaim)
 		if err != nil {
 			return false, err
 		}
@@ -207,8 +220,8 @@ func getIPAddress(cl client.Client, ipclaimName, namespace string) wait.Conditio
 
 // Poll up to timeout seconds for pod to enter running state.
 // Returns an error if the pod never enters the running state.
-func waitForPodRunning(cl client.Client, namespace, ipclaimName string, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, getIPAddress(cl, ipclaimName, namespace))
+func waitForIPClaim(ctx context.Context, cl client.Client, namespace, ipclaimName string, timeout time.Duration) error {
+	return wait.PollImmediate(time.Second, timeout, getIPAddress(ctx, cl, ipclaimName, namespace))
 }
 
 // IterateForDeallocation iterates overs currently reserved IPs and the deallocates given the container id.

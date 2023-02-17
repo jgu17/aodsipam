@@ -40,6 +40,12 @@ func NewKubernetesIPAM(containerID string, ipamConf aodsipamtypes.IPAMConfig) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed instantiating kubernetes client: %v", err)
 	}
+	config, err := NewRestConfigViaKubeconfig(ipamConf.Kubernetes.KubeConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed instantiating rest-config client: %v", err)
+	}
+	kubernetesClient.config = config
+
 	k8sIPAM := newKubernetesIPAM(containerID, ipamConf, namespace, *kubernetesClient)
 	return k8sIPAM, nil
 }
@@ -482,14 +488,14 @@ func IPManagementKubernetesUpdate1(ctx context.Context, mode int, ipam *Kubernet
 
 	switch mode {
 	case aodsipamtypes.Allocate:
-		newip, err = allocate.AssignIP1(containerID, podRef)
+		newip, err = allocate.AssignIP1(ctx, ipam.config, containerID, podRef)
 		if err != nil {
 			logging.Errorf("Error assigning IP: %v", err)
 			return newips, err
 		}
 
 	case aodsipamtypes.Deallocate:
-		_, err = allocate.DeallocateIP1(containerID)
+		_, err = allocate.DeallocateIP1(ctx, ipam.config, containerID)
 		if err != nil {
 			logging.Errorf("Error deallocating IP: %v", err)
 			return newips, err
