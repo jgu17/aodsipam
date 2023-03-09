@@ -33,7 +33,7 @@ deletepod:
 install:
 	kubectl create -f doc/crds || true
 
-uninstall: deletepod
+uninstall:
 	kubectl delete -f doc/crds || true
 
 deploycrd: uninstall install

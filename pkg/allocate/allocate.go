@@ -17,6 +17,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+var (
+	svcurl = "aodsipam-service.op.svc.cluster.local:9090"
+)
+
 // AssignmentError defines an IP assignment error.
 type AssignmentError struct {
 	firstIP net.IP
@@ -45,7 +49,7 @@ func AssignIP(ctx context.Context, config *rest.Config, containerID string, podR
 
 	responseBody := bytes.NewBuffer(postBody)
 
-	resp, err := http.Post("http://172.18.0.3:31479/getIPAddress", "application/json", responseBody)
+	resp, err := http.Post(svcurl+"/getIPAddress", "application/json", responseBody)
 	//Handle Error
 	if err != nil {
 		log.Fatalf("An Error Occured %v", err)
@@ -83,7 +87,7 @@ func DeallocateIP(ctx context.Context, config *rest.Config, containerID string) 
 
 	responseBody := bytes.NewBuffer(postBody)
 
-	resp, err := http.Post("http://172.18.0.3:31479/deleteIPAddress", "application/json", responseBody)
+	resp, err := http.Post(svcurl+"/deleteIPAddress", "application/json", responseBody)
 	//Handle Error
 	if err != nil {
 		log.Fatalf("An Error Occured %v", err)
