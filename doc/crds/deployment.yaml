@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostnames
+spec:
+  selector:
+    matchLabels:
+      app: hostnames
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hostnames
+      annotations:
+        k8s.v1.cni.cncf.io/networks: default/aodsipam-conf
+    spec:
+      containers:
+      - name: hostnames
+        image: centos/tools
+        imagePullPolicy: IfNotPresent
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "while true; do sleep 300000; done;" ]
