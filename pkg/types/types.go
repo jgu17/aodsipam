@@ -48,6 +48,9 @@ type RangeConfiguration struct {
 type IPAMConfig struct {
 	Name                     string
 	Type                     string `json:"type"`
+	NetworkArmId             string `json:"networkArmId"`
+	HaksUuid                 string `json:"haksUuid"`
+	ReleaseIp                string `json:"releaseIp"`
 	LogFile                  string `json:"log_file"`
 	LogLevel                 string `json:"log_level"`
 	ReconcilerCronExpression string `json:"reconciler_cron_expression,omitempty"`
@@ -63,6 +66,9 @@ func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 	type IPAMConfigAlias struct {
 		Name                     string
 		Type                     string `json:"type"`
+		NetworkArmId             string `json:"networkArmId"`
+		HaksUuid                 string `json:"haksUuid"`
+		ReleaseIp                string `json:"releaseIp"`
 		LogFile                  string `json:"log_file"`
 		LogLevel                 string `json:"log_level"`
 		ReconcilerCronExpression string `json:"reconciler_cron_expression,omitempty"`
@@ -84,6 +90,9 @@ func (ic *IPAMConfig) UnmarshalJSON(data []byte) error {
 	*ic = IPAMConfig{
 		Name:                     ipamConfigAlias.Name,
 		Type:                     ipamConfigAlias.Type,
+		NetworkArmId:             ipamConfigAlias.NetworkArmId,
+		HaksUuid:                 ipamConfigAlias.HaksUuid,
+		ReleaseIp:                ipamConfigAlias.ReleaseIp,
 		LogFile:                  ipamConfigAlias.LogFile,
 		LogLevel:                 ipamConfigAlias.LogLevel,
 		ReconcilerCronExpression: ipamConfigAlias.ReconcilerCronExpression,

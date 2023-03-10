@@ -11,6 +11,9 @@ spec:
       "master": "eth0",
       "mode": "bridge",
       "ipam": {
-        "type": "aodsipam"
+        "type": "aodsipam",
+        "networkArmId": "/subscriptions/121213213131/resourceGroups/op317q-rg/providers/Microsoft.NetworkCloud/l3Networks/l3network11",
+		    "haksUuid": "/subscriptions/121213213131/resourceGroups/op317q-rg/providers/Microsoft.NetworkCloud/l3Networks/haksuuid",
+		    "releaseIp": "false"
       }
     }'

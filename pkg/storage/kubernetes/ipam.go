@@ -119,14 +119,14 @@ func IPManagementKubernetesUpdate(ctx context.Context, mode int, ipam *Kubernete
 
 	switch mode {
 	case aodsipamtypes.Allocate:
-		newip, err = allocate.AssignIP(ctx, ipam.config, containerID, podRef)
+		newip, err = allocate.AssignIP(ctx, ipamConf, ipam.config, containerID, podRef)
 		if err != nil {
 			logging.Errorf("Error assigning IP: %v", err)
 			return newips, err
 		}
 
 	case aodsipamtypes.Deallocate:
-		_, err = allocate.DeallocateIP(ctx, ipam.config, containerID)
+		_, err = allocate.DeallocateIP(ctx, ipamConf, ipam.config, containerID)
 		if err != nil {
 			logging.Errorf("Error deallocating IP: %v", err)
 			return newips, err

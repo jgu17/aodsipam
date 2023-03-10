@@ -29,6 +29,14 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 		return nil, "", NewInvalidPluginError(n.IPAM.Type)
 	}
 
+	if n.IPAM.NetworkArmId == "" {
+		return nil, "", fmt.Errorf("IPAM config missing 'networkArmId' key")
+	}
+
+	if n.IPAM.HaksUuid == "" {
+		return nil, "", fmt.Errorf("IPAM config missing 'haksUuid' key")
+	}
+
 	args := types.IPAMEnvArgs{}
 	if err := cnitypes.LoadArgs(envArgs, &args); err != nil {
 		return nil, "", fmt.Errorf("LoadArgs - CNI Args Parsing Error: %s", err)

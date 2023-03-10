@@ -12,13 +12,14 @@ import (
 	"net/http"
 
 	"aodsipam/pkg/logging"
-	"aodsipam/pkg/types"
+
+	aodsipamtypes "aodsipam/pkg/types"
 
 	"k8s.io/client-go/rest"
 )
 
 var (
-	svcurl = "aodsipam-service.op.svc.cluster.local:9090"
+	svcurl = "http://172.18.0.3:31177"
 )
 
 // AssignmentError defines an IP assignment error.
@@ -40,12 +41,19 @@ func (a AssignmentError) Error() string {
 }
 
 // AssignIP assigns an IP using a range and a reserve list.
-func AssignIP(ctx context.Context, config *rest.Config, containerID string, podRef string) (net.IPNet, error) {
+func AssignIP(ctx context.Context, ipamConf aodsipamtypes.IPAMConfig, config *rest.Config, containerID string, podRef string) (net.IPNet, error) {
 
-	postBody, _ := json.Marshal(map[string]string{
-		"ipPoolName": "l3network11-ipv4",
-		"namespace":  "default",
-	})
+	request := map[string]string{
+		"networkArmId": ipamConf.NetworkArmId,
+		"haksUuid":     ipamConf.HaksUuid,
+		"releaseIp":    ipamConf.ReleaseIp,
+		"podName":      ipamConf.PodName,
+		"podNamespace": ipamConf.PodNamespace,
+	}
+
+	postBody, _ := json.Marshal(request)
+
+	logging.Debugf("Allocate -- postBody: %v ", request)
 
 	responseBody := bytes.NewBuffer(postBody)
 
@@ -56,6 +64,7 @@ func AssignIP(ctx context.Context, config *rest.Config, containerID string, podR
 	}
 	defer resp.Body.Close()
 	//Read the response body
+	logging.Debugf("Allocate -- responseBody: %v ", responseBody)
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
@@ -78,11 +87,14 @@ func AssignIP(ctx context.Context, config *rest.Config, containerID string, podR
 }
 
 // DeallocateIP assigns an IP using a range and a reserve list.
-func DeallocateIP(ctx context.Context, config *rest.Config, containerID string) (net.IP, error) {
+func DeallocateIP(ctx context.Context, ipamConf aodsipamtypes.IPAMConfig, config *rest.Config, containerID string) (net.IP, error) {
 
 	postBody, _ := json.Marshal(map[string]string{
-		"ipPoolName": "l3network11-ipv4",
-		"namespace":  "default",
+		"networkArmId": ipamConf.NetworkArmId,
+		"haksUuid":     ipamConf.HaksUuid,
+		"releaseIp":    ipamConf.ReleaseIp,
+		"podName":      ipamConf.PodName,
+		"podNamespace": ipamConf.PodNamespace,
 	})
 
 	responseBody := bytes.NewBuffer(postBody)
@@ -113,9 +125,9 @@ func DeallocateIP(ctx context.Context, config *rest.Config, containerID string) 
 
 // IterateForDeallocation iterates overs currently reserved IPs and the deallocates given the container id.
 func IterateForDeallocation(
-	reservelist []types.IPReservation,
+	reservelist []aodsipamtypes.IPReservation,
 	containerID string,
-	matchingFunction func(reservation []types.IPReservation, id string) int) ([]types.IPReservation, net.IP, error) {
+	matchingFunction func(reservation []aodsipamtypes.IPReservation, id string) int) ([]aodsipamtypes.IPReservation, net.IP, error) {
 
 	foundidx := matchingFunction(reservelist, containerID)
 	// Check if it's a valid index
@@ -129,7 +141,7 @@ func IterateForDeallocation(
 	return updatedreservelist, returnip, nil
 }
 
-func getMatchingIPReservationIndex(reservelist []types.IPReservation, id string) int {
+func getMatchingIPReservationIndex(reservelist []aodsipamtypes.IPReservation, id string) int {
 	foundidx := -1
 	for idx, v := range reservelist {
 		if v.ContainerID == id {
@@ -140,7 +152,7 @@ func getMatchingIPReservationIndex(reservelist []types.IPReservation, id string)
 	return foundidx
 }
 
-func removeIdxFromSlice(s []types.IPReservation, i int) []types.IPReservation {
+func removeIdxFromSlice(s []aodsipamtypes.IPReservation, i int) []aodsipamtypes.IPReservation {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
@@ -243,7 +255,7 @@ func IPAddOffset(ip net.IP, offset uint64) net.IP {
 }
 
 // IterateForAssignment iterates given an IP/IPNet and a list of reserved IPs
-func IterateForAssignment(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, reservelist []types.IPReservation, excludeRanges []string, containerID string, podRef string) (net.IP, []types.IPReservation, error) {
+func IterateForAssignment(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, reservelist []aodsipamtypes.IPReservation, excludeRanges []string, containerID string, podRef string) (net.IP, []aodsipamtypes.IPReservation, error) {
 	firstip := rangeStart.To16()
 	var lastip net.IP
 	if rangeEnd != nil {
@@ -307,7 +319,7 @@ func IterateForAssignment(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, r
 
 		assignedip = i
 		logging.Debugf("Reserving IP: |%v|", assignedip.String()+" "+containerID)
-		reservelist = append(reservelist, types.IPReservation{IP: assignedip, ContainerID: containerID, PodRef: podRef})
+		reservelist = append(reservelist, aodsipamtypes.IPReservation{IP: assignedip, ContainerID: containerID, PodRef: podRef})
 		break
 	}
 
