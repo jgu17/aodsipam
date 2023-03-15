@@ -44,7 +44,7 @@ func LoadIPAMConfig(bytes []byte, envArgs string, extraConfigPaths ...string) (*
 	n.IPAM.PodName = string(args.K8S_POD_NAME)
 	n.IPAM.PodNamespace = string(args.K8S_POD_NAMESPACE)
 
-	flatipam, foundflatfile, err := GetFlatIPAM(n.IPAM, extraConfigPaths...)
+	flatipam, foundflatfile, err := GetFlatIPAM(false, n.IPAM, extraConfigPaths...)
 	if err != nil {
 		return nil, "", err
 	}
@@ -88,13 +88,13 @@ func pathExists(path string) bool {
 	return true
 }
 
-func GetFlatIPAM(IPAM *types.IPAMConfig, extraConfigPaths ...string) (types.Net, string, error) {
+func GetFlatIPAM(isControlLoop bool, IPAM *types.IPAMConfig, extraConfigPaths ...string) (types.Net, string, error) {
 	// Once we have our basics, let's look for our (optional) configuration file
 	confdirs := []string{"/etc/kubernetes/cni/net.d/aodsipam.d/aodsipam.conf", "/etc/cni/net.d/aodsipam.d/aodsipam.conf", "/host/etc/cni/net.d/aodsipam.d/aodsipam.conf"}
 	confdirs = append(confdirs, extraConfigPaths...)
 	// We prefix the optional configuration path (so we look there first)
 
-	if IPAM != nil {
+	if !isControlLoop && IPAM != nil {
 		if IPAM.ConfigurationPath != "" {
 			confdirs = append([]string{IPAM.ConfigurationPath}, confdirs...)
 		}
