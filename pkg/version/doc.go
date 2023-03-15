@@ -1,3 +1,3 @@
 // Package version provides information about the current semantic version for
-// the whereabouts CNI.
+// the aodsipam CNI.
 package version

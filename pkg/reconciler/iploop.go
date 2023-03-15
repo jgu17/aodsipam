@@ -7,24 +7,21 @@ import (
 	"time"
 
 	"aodsipam/pkg/allocate"
+	"aodsipam/pkg/kubernetes"
 	"aodsipam/pkg/logging"
 	"aodsipam/pkg/types"
 
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
 	v1 "k8s.io/api/core/v1"
 )
 
 type ReconcileLooper struct {
-	k8sClient              kubernetes.Client
-	liveWhereaboutsPods    map[string]podWrapper
-	orphanedIPs            []OrphanedIPReservations
-	orphanedClusterWideIPs []whereaboutsv1alpha1.OverlappingRangeIPReservation
-	requestTimeout         int
+	k8sClient        kubernetes.Client
+	liveAodsIpamPods map[string]podWrapper
+	orphanedIPs      []OrphanedIPReservations
+	requestTimeout   int
 }
 
 type OrphanedIPReservations struct {
-	Pool        storage.IPPool
 	Allocations []types.IPReservation
 }
 
@@ -57,11 +54,11 @@ func NewReconcileLooperWithClient(ctx context.Context, k8sClient *kubernetes.Cli
 		return nil, err
 	}
 
-	whereaboutsPodRefs := getPodRefsServedByWhereabouts(ipPools)
+	aodsIpamPodRefs := getPodRefsServedByAodsIpam(ipPools)
 	looper := &ReconcileLooper{
-		k8sClient:           *k8sClient,
-		liveWhereaboutsPods: indexPods(pods, whereaboutsPodRefs),
-		requestTimeout:      timeout,
+		k8sClient:        *k8sClient,
+		liveAodsIpamPods: indexPods(pods, aodsIpamPodRefs),
+		requestTimeout:   timeout,
 	}
 
 	if err := looper.findOrphanedIPsPerPool(ipPools); err != nil {
@@ -74,32 +71,8 @@ func NewReconcileLooperWithClient(ctx context.Context, k8sClient *kubernetes.Cli
 	return looper, nil
 }
 
-func (rl *ReconcileLooper) findOrphanedIPsPerPool(ipPools []storage.IPPool) error {
-	for _, pool := range ipPools {
-		orphanIP := OrphanedIPReservations{
-			Pool: pool,
-		}
-		for _, ipReservation := range pool.Allocations() {
-			logging.Debugf("the IP reservation: %s", ipReservation)
-			if ipReservation.PodRef == "" {
-				_ = logging.Errorf("pod ref missing for Allocations: %s", ipReservation)
-				continue
-			}
-			if !rl.isPodAlive(ipReservation.PodRef, ipReservation.IP.String()) {
-				logging.Debugf("pod ref %s is not listed in the live pods list", ipReservation.PodRef)
-				orphanIP.Allocations = append(orphanIP.Allocations, ipReservation)
-			}
-		}
-		if len(orphanIP.Allocations) > 0 {
-			rl.orphanedIPs = append(rl.orphanedIPs, orphanIP)
-		}
-	}
-
-	return nil
-}
-
 func (rl ReconcileLooper) isPodAlive(podRef string, ip string) bool {
-	for livePodRef, livePod := range rl.liveWhereaboutsPods {
+	for livePodRef, livePod := range rl.liveAodsIpamPods {
 		if podRef == livePodRef {
 			livePodIPs := livePod.ips
 			logging.Debugf(

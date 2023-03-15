@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	k8snetworkplumbingwgv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage"
 
 	v1 "k8s.io/api/core/v1"
 )
@@ -35,22 +34,12 @@ func wrapPod(pod v1.Pod) *podWrapper {
 	}
 }
 
-func getPodRefsServedByWhereabouts(ipPools []storage.IPPool) map[string]void {
-	whereaboutsPodRefs := map[string]void{}
-	for _, pool := range ipPools {
-		for _, ipReservation := range pool.Allocations() {
-			whereaboutsPodRefs[ipReservation.PodRef] = void{}
-		}
-	}
-	return whereaboutsPodRefs
-}
-
-func indexPods(livePodList []v1.Pod, whereaboutsPodNames map[string]void) map[string]podWrapper {
+func indexPods(livePodList []v1.Pod, aodsipamPodNames map[string]void) map[string]podWrapper {
 	podMap := map[string]podWrapper{}
 
 	for _, pod := range livePodList {
 		podRef := composePodRef(pod)
-		if _, isWhereaboutsPod := whereaboutsPodNames[podRef]; !isWhereaboutsPod {
+		if _, isAodsIpamPod := aodsipamPodNames[podRef]; !isAodsIpamPod {
 			continue
 		}
 		wrappedPod := wrapPod(pod)

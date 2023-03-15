@@ -1,15 +1,20 @@
 package controlloop
 
 import (
+	"aodsipam/pkg/allocate"
+	"aodsipam/pkg/config"
+	"aodsipam/pkg/logging"
+	"aodsipam/pkg/types"
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -28,7 +33,7 @@ const (
 	defaultMountPath      = "/host"
 	ipReconcilerQueueName = "pod-updates"
 	syncPeriod            = time.Second
-	whereaboutsConfigPath = "/etc/cni/net.d/whereabouts.d/whereabouts.conf"
+	aodsipamConfigPath    = "/etc/cni/net.d/aodsipam.d/aodsipam.conf"
 	maxRetries            = 2
 )
 
@@ -65,10 +70,9 @@ func NewPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.I
 
 func newPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.Interface, k8sCoreInformerFactory v1coreinformerfactory.SharedInformerFactory, wbSharedInformerFactory wbinformers.SharedInformerFactory, netAttachDefInformerFactory nadinformers.SharedInformerFactory, broadcaster record.EventBroadcaster, recorder record.EventRecorder, cleanupFunc garbageCollector) *PodController {
 	k8sPodFilteredInformer := k8sCoreInformerFactory.Core().V1().Pods()
-	ipPoolInformer := wbSharedInformerFactory.Whereabouts().V1alpha1().IPPools()
+
 	netAttachDefInformer := netAttachDefInformerFactory.K8sCniCncfIo().V1().NetworkAttachmentDefinitions()
 
-	poolInformer := ipPoolInformer.Informer()
 	networksInformer := netAttachDefInformer.Informer()
 	podsInformer := k8sPodFilteredInformer.Informer()
 
@@ -87,15 +91,12 @@ func newPodController(k8sCoreClient kubernetes.Interface, wbClient wbclientset.I
 		k8sClient:               k8sCoreClient,
 		wbClient:                wbClient,
 		arePodsSynched:          podsInformer.HasSynced,
-		areIPPoolsSynched:       poolInformer.HasSynced,
 		areNetAttachDefsSynched: networksInformer.HasSynced,
 		broadcaster:             broadcaster,
 		recorder:                recorder,
 		podsInformer:            podsInformer,
-		ipPoolInformer:          poolInformer,
 		netAttachDefInformer:    networksInformer,
 		podLister:               k8sPodFilteredInformer.Lister(),
-		ipPoolLister:            ipPoolInformer.Lister(),
 		netAttachDefLister:      netAttachDefInformer.Lister(),
 		workqueue:               queue,
 		cleanupFunc:             cleanupFunc,
@@ -169,19 +170,6 @@ func (pc *PodController) garbageCollectPodIPs(pod *v1.Pod) error {
 			continue
 		} else if err != nil {
 			return fmt.Errorf("failed to create an IPAM configuration for the pod %s iface %s: %+v", podID(podNamespace, podName), ifaceStatus.Name, err)
-		}
-
-		var pools []*whereaboutsv1alpha1.IPPool
-		for _, rangeConfig := range ipamConfig.IPRanges {
-			pool, err := pc.ipPool(rangeConfig.Range)
-
-			if err != nil {
-				return fmt.Errorf("failed to get the IPPool data: %+v", err)
-			}
-
-			logging.Verbosef("pool range [%s]", pool.Spec.Range)
-
-			pools = append(pools, pool)
 		}
 
 		for _, pool := range pools {
@@ -261,14 +249,6 @@ func (pc *PodController) ifaceNetAttachDef(ifaceStatus nadv1.NetworkStatus) (*na
 	return nad, nil
 }
 
-func (pc *PodController) ipPool(cidr string) (*whereaboutsv1alpha1.IPPool, error) {
-	pool, err := pc.ipPoolLister.IPPools(ipPoolsNamespace()).Get(wbclient.NormalizeRange(cidr))
-	if err != nil {
-		return nil, err
-	}
-	return pool, nil
-}
-
 func (pc *PodController) addressGarbageCollected(pod *v1.Pod, networkName string, ipRange string, allocationIndex string) error {
 	if pc.recorder != nil {
 		ip, _, err := net.ParseCIDR(ipRange)
@@ -335,9 +315,9 @@ func podNetworkStatus(pod *v1.Pod) ([]nadv1.NetworkStatus, error) {
 }
 
 func ipamConfiguration(nad *nadv1.NetworkAttachmentDefinition, podNamespace string, podName string, mountPath string) (*types.IPAMConfig, error) {
-	mounterWhereaboutsConfigFilePath := mountPath + whereaboutsConfigPath
+	mounterAodsIpamConfigFilePath := mountPath + aodsipamConfigPath
 
-	ipamConfig, err := config.LoadIPAMConfiguration([]byte(nad.Spec.Config), "", mounterWhereaboutsConfigFilePath)
+	ipamConfig, err := config.LoadIPAMConfiguration([]byte(nad.Spec.Config), "", mounterAodsIpamConfigFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +329,7 @@ func ipamConfiguration(nad *nadv1.NetworkAttachmentDefinition, podNamespace stri
 }
 
 func ipPoolsNamespace() string {
-	const wbNamespaceEnvVariableName = "WHEREABOUTS_NAMESPACE"
+	const wbNamespaceEnvVariableName = "AODSIPAM_NAMESPACE"
 	if wbNamespace, found := os.LookupEnv(wbNamespaceEnvVariableName); found {
 		return wbNamespace
 	}
